@@ -18,7 +18,7 @@ if (isset($_GET['delid']))
 	}
 	else
 	{
-		alert_go("删除文件失败!","");
+		alert_go("删除文件失败!","file_manage.php");
 	}		
 }
 else

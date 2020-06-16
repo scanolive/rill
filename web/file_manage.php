@@ -96,11 +96,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST')
 		$file_exte_name = pathinfo($_FILES["upfile"]["name"], PATHINFO_EXTENSION);
 		$time_str = date('YmdHis',time());
 		$save_name = $time_str .".". $file_exte_name;
-
+		
+		if(!is_writable($UPFILE_DIR)){
+		alert_go("上传目录没有写入权限!","file_manage.php");
+        exit;
+		}
+		else
+		{	
 		move_uploaded_file($_FILES["upfile"]["tmp_name"],$UPFILE_DIR.$save_name);
 		$sql = "insert upfile set FileName='$file_name', SaveName='$save_name', FileSize = '$file_size', FileDesc='$filedesc',UserId = '$s_u_id';";
 		do_sql($sql);
 		alert_go("上传文件成功!","file_manage.php");
+		}
 		/*
 		echo $save_name;
 		echo "<br/>";

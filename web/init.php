@@ -82,6 +82,15 @@ function test_user()
 
 $test_db = test_db();
 $test_phpsocket = test_phpsocket();
+if(!is_writable($UPFILE_DIR))
+{
+	$test_upload_dir = "NO"; 	
+}
+else
+{
+	$test_upload_dir = "YES";
+}
+
 if ($test_db == "OK")
 {
 	$test_user = test_user();
@@ -90,7 +99,7 @@ else
 {
 	alert_go("","init_db.php");		
 }
-if ($test_db == "OK" and  $test_user == "OK")
+if ($test_db == "OK" and  $test_user == "OK" and $test_upload_dir == "YES")
 {
 	alert_go("系统检测成功","login.php");
 }
@@ -125,6 +134,10 @@ $TITLE_NAME = getrs($sql)[0][0];
   <tr>
     <td height="24">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;php是否启用socket测试</td>
     <td><div align="right"><?php echo $test_phpsocket; ?>&nbsp;&nbsp;&nbsp;</div></td>
+  </tr>
+  <tr>
+    <td height="24">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;默认上传目录写入权限测试</td>
+    <td><div align="right"><?php echo $test_upload_dir ; ?>&nbsp;&nbsp;&nbsp;</div></td>
   </tr>
   <tr>
     <td height="24">&nbsp;</td>
