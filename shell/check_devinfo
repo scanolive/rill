@@ -1,0 +1,46 @@
+#!/bin/bash
+UNAME=`which uname`
+HOSTNAME_CMD=`which hostname`
+DMIDECODE=`which dmidecode` || (yum install dmidecode -y;DMIDECODE=`which dmidecode`)
+FDISK=`which fdisk`
+FREE=`which free`
+UNAME=`which uname`
+UPTIME=`which uptime`
+SN=`$DMIDECODE |grep "Serial Number:" |awk 'NR==1 {print $3}'`|| SN='NO_Sernumber'
+Release_Date=`$DMIDECODE|grep "Release"|awk -F ":" '{print $2}'`|| Release_Date='01/01/1980'
+VENDOR=`$DMIDECODE|grep "Vendor" |awk 'NR==1 {print $2}'`|| VENDOR='NO_Vendor'
+MODEL=`$DMIDECODE |grep "Product"|awk -F ":" 'NR==1 {print $2}'|awk '{print $2$3}'`|| MODEL='NO_Product'
+CPU_NUM=`cat /proc/cpuinfo | grep physical | uniq -c|wc -l`||CPU_NUM=1
+CPU_MODEL=`cat /proc/cpuinfo | grep "model name"|uniq |cut -f2 -d:`
+CPU_PRO=`grep ^processor /proc/cpuinfo |wc -l`||CPU_PRO=1
+DISK_SIZE=`$FDISK -l 2>/dev/null |grep "Disk"|grep bytes|grep -v "VolGroup"|grep -v "mapper"| awk '{print $3"G"}'`
+MEM_SIZE=`$FREE -m|grep Mem|awk '{if ($2<1024) print substr($2,1,3)"M";else if ($2<10240 && $2>1024) print substr($2/1024,1,3)"G";else print substr($2/1024,1,4)"G"}'`
+UPTIME=`$UPTIME |awk '{if (match($0,"day")!=0) print $3;else print 0}'`
+###############################check-sys-base#################################
+if [[ -f '/etc/debian_version' ]];then
+	OS="Debian_"`cat /etc/debian_version`
+elif [[ -f '/etc/redhat-release' ]];then
+	OS=`cat /etc/redhat-release|sed 's/Linux\|Server\|release\|Enterprise//g'|sed 's/[ ][ ]*/_/g'|sed 's/([^)]*)//g'|sed 's/_*$//g'|awk -F '.' '{print $1"."$2}'`
+else 
+	OS="Unkown"
+fi
+KERNEL=`$UNAME -r`
+HOSTNAME=`$HOSTNAME_CMD`
+IPS=`ip -4 address | grep ' inet ' | grep -vE '127.0.0.1|docker0|tun' |awk '{print $2}'|awk -F '/' '{print $1}'`
+
+echo \"devinfo\":\{\
+	\"SN\":\"$SN\",\
+	\"Uptime\":\"$UPTIME\",\
+	\"HostName\":\"$HOSTNAME\",\
+	\"Release_Date\":\"$Release_Date\",\
+   	\"Vendor\":\"$VENDOR\",\
+	\"Model\":\"$MODEL\",\
+	\"Cpu_Model\":\"$CPU_MODEL\",\
+	\"Cpu_Num\":\"$CPU_NUM\",\
+	\"Cpu_Pro\":\"$CPU_PRO\",\
+	\"Disk\":\"$DISK_SIZE\",\
+	\"Memory\":\"$MEM_SIZE\",\
+	\"OS\":\"$OS\",\
+	\"Kernel\":\"$KERNEL\",\
+	\"Ips\":\"$IPS\"\
+	\}

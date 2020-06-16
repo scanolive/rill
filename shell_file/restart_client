@@ -1,0 +1,103 @@
+#!/usr/bin/python
+#encoding=utf-8
+import os
+import atexit
+import sys
+import time
+from signal import SIGTERM
+import string
+
+HOME_DIR = sys.path[0] + '/'
+PIDFILE = HOME_DIR + 'restart_client.pid'
+CLIENT_FILENAME = sys.argv[2]
+
+class Daemon:
+	def __init__(self,pidfile,homedir):
+		self.pidfile = pidfile
+		self.homedir = homedir
+
+	def	daemonize(self):
+		try:
+			if os.fork() > 0:
+				os._exit(0)
+		except OSError, error:
+			os._exit(1)
+    
+		os.chdir(self.homedir)
+		os.setsid()
+		os.umask(0)
+    
+		try:
+			pid = os.fork()
+			if pid > 0:
+				os._exit(0)
+		except OSError, error:
+			os._exit(1)
+		atexit.register(self.delpid)
+		pid = str(os.getpid())
+		file(self.pidfile,'w+').write("%s\n" % pid)
+
+	def delpid(self):
+		os.remove(self.pidfile)
+
+	def	start(self):
+		try:
+			pf = file(self.pidfile,'r')
+			pid = int(pf.read().strip())
+			pf.close()
+		except IOError:
+			pid = None
+				
+		self.daemonize()
+		self.run()
+
+	def stop(self):
+		try:
+			pf = file(self.pidfile,'r')
+			pid = int(pf.read().strip())
+			pf.close()
+		except IOError:
+			pid = None
+		if not pid:
+			return
+		try:
+			while True:
+				os.kill(pid, SIGTERM)
+				time.sleep(0.1)
+		except OSError, err:
+			err = str(err)
+			if err.find("No such process") > 0:
+				if os.path.exists(self.pidfile):
+					os.remove(self.pidfile)
+			else:
+				sys.exit(1)
+	def restart(self):
+		self.stop()
+		self.start()
+				
+	def run(self):
+		pass
+
+class My_daemon(Daemon):
+	def run(self):
+		time.sleep(5)
+		os.system(CLIENT_FILENAME+' start')
+		sys.exit(0)
+
+if __name__ == '__main__':
+	daemon = My_daemon(pidfile=PIDFILE,homedir=HOME_DIR)
+	if len(sys.argv) == 3:
+		if 'START' == (sys.argv[1]).upper():
+			daemon.start()
+		elif 'STOP' == (sys.argv[1]).upper():
+			daemon.stop()
+		elif 'RESTART' == (sys.argv[1]).upper():
+			daemon.restart()
+		else:
+			print "Unknow Command!"
+			print "Usage: %s start|stop|restart" % sys.argv[0]
+			sys.exit(2)
+		sys.exit(0)
+	else:
+		print "Usage: %s start|stop|restart" % sys.argv[0]
+		sys.exit(0)

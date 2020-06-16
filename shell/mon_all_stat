@@ -1,0 +1,123 @@
+#!/bin/bash
+tmp="'"
+#---------------------mon_connect_stat---------------------
+tcpnum=`ss -at4|grep -v "Address"|wc -l`
+udpnum=`ss -au4|grep -v "Address"|wc -l`
+allnum=`expr $tcpnum + $udpnum`
+connect_str="\"constat\":{\"udp\":"$udpnum",\"tcp\":"$tcpnum",\"allnum\":"$allnum"}"
+
+#---------------------mon_disk_stat---------------------
+disk_totel=$(/sbin/fdisk -l 2>/dev/null  | grep "Disk \/"|grep -v "VolGroup"| awk -F[\ :,] '{print $2,$4$5}')
+Size=($(df -lh | grep -v -E '/mnt|/media/cdrom|/lib/init/rw|tmpfs|udev|rootfs' | sed  '/\/dev\/[^h,c,s,shm,disk][^d]/N;s/\n//g'| awk 'NR>1{print $2}'))
+Used=($(df -lh | grep -v -E '/mnt|/media/cdrom|/lib/init/rw|tmpfs|udev|rootfs' | sed  '/\/dev\/[^h,c,s,shm,disk][^d]/N;s/\n//g'| awk 'NR>1{print $3}'))
+Mounted=($(df -lh | grep -v -E '/mnt|/media/cdrom|/lib/init/rw|tmpfs|udev|rootfs' | sed  '/\/dev\/[^h,c,s,shm,disk][^d]/N;s/\n//g'| awk 'NR>1{print $6}'))
+
+
+for ((i=0;i<${#Size[@]};i++))
+do
+	s_l=$(expr length ${Size[$i]})
+        u_l=$(expr length ${Used[$i]})
+	size=${Size[$i]}
+	used=${Used[$i]}
+	l_s=${size:$(($s_l-1)):$s_l}
+	l_u=${used:$(($u_l-1)):$u_l}
+
+	if [[ $l_s == 'G' ]]
+	then
+		lSize=${size:0:$(($s_l-1))}
+		lSize=$(expr ${lSize%.*} \* 1024 )
+	elif [[ $l_s == 'T' ]]
+	then
+		lSize=${size:0:$(($s_l-1))}
+                lSize=$(expr ${lSize%.*} \* 1024 \* 1024 )
+	else
+		lSize=${size:0:$(($s_l-1))}
+	fi
+
+	if [[ $l_u == 'G' ]]
+	then
+        	lUsed=${used:0:$(($u_l-1))}
+        	lUsed=`expr ${lUsed%.*} \* 1024`
+	elif [[ $l_u == 'T' ]]
+	then
+		lUsed=${used:0:$(($u_l-1))}
+                lUsed=`expr ${lUsed%.*} \* 1024 \* 1024`
+	else
+		lUsed=${used:0:$(($u_l-1))}
+	fi
+
+
+	if [[ $lSize == "" ]]
+	then
+		lSize=0
+	fi 
+
+	if [[ $lUsed == "" ]]
+	then
+		lUsed=0
+	fi
+
+	str=$str\""${Mounted[$i]}"\":"{\"used\":"$lUsed",\"total\":"$lSize"},"
+	js(){
+	str=$@
+	a1=`echo $str|awk '{print $1}'`
+	a2=`echo $str|awk '{print $2}'`
+	if [[ $a2 == "" ]]
+   	then
+		a2=0
+	fi
+	aa=`echo $a1 $a2|awk '{print $1+$2}'|awk -F "." '{print $1}'`
+	echo $aa
+	}
+	tSize=`js $tSize $lSize`
+	tUsed=`js $tUsed $lUsed`
+done
+
+disk_str="\"diskstat\":{"$str"\"all\":{\"used\":"$tUsed",\"total\":"$tSize"}}"
+
+#---------------------mon_load_stat---------------------
+uptime=$(which uptime)
+system_load=$($uptime | awk -F':' '{print $NF}' | sed 's/,//g')
+one_load=$(echo $system_load| awk '{print $1}')
+five_load=$(echo $system_load| awk '{print $2}')
+fifteen_load=$(echo $system_load| awk '{print $3}')
+
+load_str="\"loadstat\":{\"fifteen\":"$fifteen_load",\"five\":"$five_load",\"one\":"$one_load"}"
+
+#---------------------mon_login_stat---------------------
+onlineuser=$(w|grep "pts"|wc -l)
+login_str="\"login\":"$onlineuser
+
+#---------------------mon_memory_stat---------------------
+mem_total=$(free -m | grep Mem | awk '{print $2}')
+mem_used=$(free -m | grep Mem | awk '{print $3}')
+mem_str="\"memory\":{\"used\":"$mem_used",\"total\":"$mem_total"}"
+
+#---------------------mon_network_stat---------------------
+str=''
+#eth=($(ifconfig|grep 'Link '|grep 'Ethernet' |grep -v 'Loopback'|grep -v 'vif'|awk '{print $1}'))
+eth=($(ip -4 address |grep 'BROADCAST,MULTICAST,UP,LOWER_UP'|awk -F ': ' '{print $2}'))
+for ((i=0;i<${#eth[@]};i++))
+do
+	RXpre1=`expr $(/sbin/ip -s link show ${eth[$i]} | awk 'NR==4{print $1}')`
+	TXpre1=`expr $(/sbin/ip -s link show ${eth[$i]} | awk 'NR==6{print $1}')`
+	sleep 1
+	RXpre2=`expr $(/sbin/ip -s link show ${eth[$i]} | awk 'NR==4{print $1}')`
+	TXpre2=`expr $(/sbin/ip -s link show ${eth[$i]} | awk 'NR==6{print $1}')`
+	
+	Tx=`expr $TXpre2 - $TXpre1` 
+	Rx=`expr $RXpre2 - $RXpre1`
+	
+	if [[ "$RXpre2" -ne 0 ]];then
+		str=$str\"${eth[$i]}\"":{\"outbond\":"$Tx",\"inbond\":"$Rx"},"
+	fi
+done
+network_str="\"network\":{"${str:0:((`expr length $str` - 1 ))}"}"
+
+#---------------------mon_process_stat---------------------
+PS=`which ps`
+num=`$PS -ef|wc -l`
+process_str="\"process_num\":"$num
+
+str="{"$connect_str","$disk_str","$load_str","$login_str","$mem_str","$network_str","$process_str"}"
+echo $str
