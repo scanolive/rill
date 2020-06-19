@@ -556,7 +556,7 @@ for( $i=0;$i<count($alarms_rs);$i++ )
 	echo "<tr>";
 	if ($s_u_level == 1)	
 	{
-	    echo '<td><input name="delid[]" type="checkbox" id="delid[]" value=".$alarms_rs[$i][9]."></td>';
+	    echo '<td><input name="delid[]" type="checkbox" id="delid[]" value="'.$alarms_rs[$i][9].'"></td>';
 	}
 	echo "<td height=18 class=Ptable>";	
 	echo $i+1+$pagesize*($page-1);
