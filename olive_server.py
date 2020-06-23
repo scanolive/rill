@@ -14,6 +14,9 @@ from signal import SIGTERM
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
+from cryptography.fernet import Fernet
+import rsa
+import pickle
 import subprocess
 import smtplib
 import string
@@ -91,6 +94,7 @@ PAGE_SIZE = 4096
 '''-----------------------------------------------------------------------------------------'''
 #加密解密函数
 
+'''
 def encrypt(s):
     key = AUTH_KEY
     b = bytearray(str(s).encode("utf-8"))
@@ -134,7 +138,19 @@ def decrypt(s):
         b[i] = b1
     b = b.decode("utf-8")
     return b.strip()
+'''
 
+def decrypt(s):
+    print(s)
+    f = Fernet(server_key)
+    c = f.decrypt(s).decode()
+    return c
+
+def encrypt(s):
+    print(s)
+    f = Fernet(server_key)
+    c = f.encrypt(s.encode("utf-8"))
+    return c
 
 #随机函数
 def random_time():
@@ -1440,7 +1456,20 @@ def Listen_Client():
             client_ip = addr[0]
             rev_data = connect.recv(65536)
             rev_data = rev_data.decode()
-            #rev_data = decrypt(rev_data)
+            if rev_data == 'I love rill':
+                connect.send("Me tooooooooooooooooooooooooooo")
+                publicKeyPK, pubKeySha256 = pickle.loads(connect.recv(1024))
+                if hashlib.sha256(publicKeyPK).hexdigest() != pubKeySha256:
+                    raise AuthenticationError("密钥被篡改！")
+                else:
+                    publicKey = pickle.loads(publicKeyPK)
+                    global server_key
+                    en_sym_key = rsa.encrypt(pickle.dumps(server_key), publicKey)
+                    en_sym_key_sha256 = hashlib.sha256(en_sym_key).hexdigest()
+                    connect.send(pickle.dumps((en_sym_key,en_sym_key_sha256)))
+            else:
+                rev_data = decrypt(rev_data)
+
             if rev_data.endswith(ENCODE_END_STR):
                 rev_data = decrypt(rev_data)
                 if len(rev_data.split(SEP_STR))>=3:
@@ -1490,11 +1519,22 @@ def Listen_Client():
                     else:
                         Save_Log('OLIVE_SERVER_DO',' try to do ' + cmd )
             elif rev_data == 'I love rill':
-                pass
+                connect.send("Me tooooooooooooooooooooooooooo")
+                publicKeyPK, pubKeySha256 = pickle.loads(connect.recv(1024))
+                if hashlib.sha256(publicKeyPK).hexdigest() != pubKeySha256:
+                    raise AuthenticationError("密钥被篡改！")
+                else:
+                    publicKey = pickle.loads(publicKeyPK)
+                    global server_key
+                    en_sym_key = rsa.encrypt(pickle.dumps(server_key), publicKey)
+                    en_sym_key_sha256 = hashlib.sha256(en_sym_key).hexdigest()
+                    connect.send(pickle.dumps((en_sym_key,en_sym_key_sha256)))
+
             else:
                 Save_Log('Listen_Client',client_ip + ' try to do something ' + rev_data)
             connect.close()
         except Exception as e:
+            print(e)
             Save_Log('Listen_Client',str(e))
 
 #基本的守护进程类
@@ -1589,6 +1629,8 @@ def Init():
     global glo_lock
     global MON_PORTS
     global MONWEB_INTERVAL
+    global server_key
+    server_key = Fernet.generate_key()
     glo_lock = threading.Lock()
     dict_ipinfo = {}
     #dict_alarms_monweb = {}
