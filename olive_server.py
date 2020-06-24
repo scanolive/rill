@@ -30,11 +30,28 @@ if sys.version_info.major == 2:
     import MySQLdb as MySQL
     from MySQLdb import cursors as mysql_cur
     import urllib2 as url_req
+    def pickle_loads(obj):
+        return pickle.loads(obj)
+    def bytes2str(bytes_or_str):
+        if isinstance(bytes_or_str,bytes):
+            s = bytes_or_str.decode()
+        elif isinstance(bytes_or_str,unicode):
+            s = bytes_or_str.encode()
+        elif isinstance(bytes_or_str,str):
+            s = bytes_or_str
+        return s
 else:
     import urllib.request as url_req
     import pymysql as MySQL
     from pymysql import cursors as mysql_cur
-
+    def pickle_loads(obj):
+         return pickle.loads(obj,encoding='bytes')
+    def bytes2str(bytes_or_str):
+        if isinstance(bytes_or_str,bytes):
+            s = bytes_or_str.decode()
+        elif isinstance(bytes_or_str,str):
+            s = bytes_or_str
+        return s
 
 #基本配置
 '''--------------------------------------------------------------------------------------'''
@@ -92,6 +109,8 @@ PAGE_SIZE = 4096
 
 #定义函数
 '''-----------------------------------------------------------------------------------------'''
+
+
 #加密解密函数
 
 '''
@@ -141,15 +160,19 @@ def decrypt(s):
 '''
 
 def decrypt(s):
-    print(s)
-    f = Fernet(server_key)
-    c = f.decrypt(s).decode()
-    return c
+    #print('jiemi',s)
+    s = s.replace(ENCODE_END_STR,'')
+    if s.endswith(END_CMD_STR):
+        return s.decode("utf-8")
+    c = fernet_obj.decrypt(s.encode())
+    return c.decode("utf-8")
 
 def encrypt(s):
-    print(s)
-    f = Fernet(server_key)
-    c = f.encrypt(s.encode("utf-8"))
+    #print('jiami',s)
+    #f = Fernet(server_key)
+    c = fernet_obj.encrypt(s.encode("utf-8"))
+    c = c + ENCODE_END_STR.encode("utf-8")
+    #print(c)
     return c
 
 #随机函数
@@ -1019,6 +1042,17 @@ def Check_Port(address, port):
     except socket.error as  e:
         return False
 
+
+def Update_Client_Key(address, port):
+    s = socket.socket()
+    try:
+        s.connect((address, port))
+        s.send('I love rill'.encode())
+        s.close()
+    except socket.error as  e:
+        pass
+        #print(e)
+
 def Monweb():
     def check_url(monweb_id,url,status_now,mutex):
         url_host = url.split('/')[2]
@@ -1285,8 +1319,19 @@ def Mon_Ports():
                 Update_Dict(dict_ports,'ports',pid,'id',data_dict_ports,1)    
         time.sleep(180)
 
+def Update_Client_Key_All():
+    sql = "select ip,id from ipinfo where ip != '0.0.0.0' and IsAlive='alive' and Enable=1 and ClientStatus=1"
+    ip_list = Select(sql)
+    if ip_list[0]:
+        if len(ip_list[1])>0:
+            ip_list = ip_list[1]
+            for ips in ip_list:
+                ip = ips[0]
+                Update_Client_Key(ip,CLIENT_PORT)
+
 #间隔检测所有客户端基本信息的函数
 def Check_Devinfo_All():
+    time.sleep(30)
     sql = "select ip,id from ipinfo where ip != '0.0.0.0' and IsAlive='alive' and Enable=1 and ClientStatus=1"
     ip_list = Select(sql)
     if ip_list[0]:
@@ -1313,6 +1358,10 @@ def Recv_Data(socket):
     socket.close()
 
 def Do_Client(ip,cmd):
+    if cmd.split()[0] in NORUN_CMD:
+        result = [0,"Command %s not allowed to run \n" % cmd.split()[0]]
+        return result
+
     if Check_Port(ip,CLIENT_PORT):
         if cmd.find('OLIVE') < 0:
             olive_cmd = 'OLIVE_SERVER_CMD' + SEP_STR + cmd + SEP_STR + END_CMD_STR
@@ -1448,6 +1497,7 @@ def Do_Bg_Result(markid,out,err):
 def Listen_Client():
     server_ips = get_all_ips()
     s = socket.socket()
+    s.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1) 
     s.bind((BIND_IP,BIND_PORT))
     s.listen(1024)
     while True:
@@ -1455,21 +1505,9 @@ def Listen_Client():
             connect,addr = s.accept()
             client_ip = addr[0]
             rev_data = connect.recv(65536)
+            #print(rev_data)
             rev_data = rev_data.decode()
-            if rev_data == 'I love rill':
-                connect.send("Me tooooooooooooooooooooooooooo")
-                publicKeyPK, pubKeySha256 = pickle.loads(connect.recv(1024))
-                if hashlib.sha256(publicKeyPK).hexdigest() != pubKeySha256:
-                    raise AuthenticationError("密钥被篡改！")
-                else:
-                    publicKey = pickle.loads(publicKeyPK)
-                    global server_key
-                    en_sym_key = rsa.encrypt(pickle.dumps(server_key), publicKey)
-                    en_sym_key_sha256 = hashlib.sha256(en_sym_key).hexdigest()
-                    connect.send(pickle.dumps((en_sym_key,en_sym_key_sha256)))
-            else:
-                rev_data = decrypt(rev_data)
-
+            #print(type(rev_data))
             if rev_data.endswith(ENCODE_END_STR):
                 rev_data = decrypt(rev_data)
                 if len(rev_data.split(SEP_STR))>=3:
@@ -1518,25 +1556,26 @@ def Listen_Client():
                         Sync_Db_Monweb()
                     else:
                         Save_Log('OLIVE_SERVER_DO',' try to do ' + cmd )
-            elif rev_data == 'I love rill':
-                connect.send("Me tooooooooooooooooooooooooooo")
-                publicKeyPK, pubKeySha256 = pickle.loads(connect.recv(1024))
-                if hashlib.sha256(publicKeyPK).hexdigest() != pubKeySha256:
-                    raise AuthenticationError("密钥被篡改！")
-                else:
-                    publicKey = pickle.loads(publicKeyPK)
-                    global server_key
-                    en_sym_key = rsa.encrypt(pickle.dumps(server_key), publicKey)
-                    en_sym_key_sha256 = hashlib.sha256(en_sym_key).hexdigest()
-                    connect.send(pickle.dumps((en_sym_key,en_sym_key_sha256)))
 
+            elif rev_data == 'I love rill':
+                connect.send(("Me tooooooooooooooooooooooooooo").encode())
+                client_public_key, client_public_key_sha256 = pickle_loads(connect.recv(1024))
+                client_public_key_sha256 = bytes2str(client_public_key_sha256)
+                if hashlib.sha256(client_public_key).hexdigest() != client_public_key_sha256:
+                    raise Exception("key is err")
+                else:
+                    client_public_key = pickle_loads(client_public_key)
+                    en_server_key = rsa.encrypt(pickle.dumps(server_key,protocol=2), client_public_key)
+                    en_server_key_sha256 = hashlib.sha256(en_server_key).hexdigest()
+                    connect.send(pickle.dumps((en_server_key,en_server_key_sha256),protocol=2))
+            elif rev_data == "":
+                pass
             else:
                 Save_Log('Listen_Client',client_ip + ' try to do something ' + rev_data)
             connect.close()
         except Exception as e:
-            print(e)
+            #print(e)
             Save_Log('Listen_Client',str(e))
-
 #基本的守护进程类
 class Daemon:
     def __init__(self,pidfile,homedir,process_name):
@@ -1614,38 +1653,25 @@ class Daemon:
 
 
 def Init():
-    sql_sys_config = "select KeyName,KeyValue from sys_config where KeyName in('def_mon_ports','monweb_interval')";
-    sql_ipinfo = "select id,Ip,GroupId,IsAlive,ClientStatus,LoadLevel,DiskLevel,NetworkLevel,ProcessLevel,LoginLevel,ConnectLevel,Enable,1395337260 as LastCheckTime,Cpu_Pro,(select group_concat(id) from alarms where alarms.ipid=ipinfo.id and IsBeOk=0) as Alarms_Ids,(select group_concat(ports.id) from ports where ipinfo.id=ports.ipid and ports.IsMon=1)  as Ports_ids  from ipinfo"
-    sql_alarms = "select alarms.id as id,Msg,Type,IsAlarm,IsSend,IsBeOk,Ipid,Note,CreateTime,UpdateTime,SendTime,GroupId as Gid from alarms left join ipinfo on alarms.Ipid=ipinfo.id  where IsBeOk=0"
-    #sql_alarms = "select * from alarms where IsBeOk=0 and Type!='monweb'"
-    sql_ports = "select ports.id,Ip,Port,ports.Status from ports left join ipinfo on ports.ipid=ipinfo.id where IsMon=1 and ipinfo.ip!='0.0.0.0'"
-    sql_alarms_monweb = "select * from alarms where IsBeOk=0 and Type='monweb'"
-    sql_monweb = "select id,MonUrl,RstCode,Gid,(select group_concat(id) from alarms where Ipid=monweb.id and IsBeOk=0) as Alarms_Ids from monweb  where Enable = 1"
+    '''
     global dict_ipinfo 
-    #global dict_alarms_monweb 
     global dict_alarms 
     global dict_ports
     global dict_monweb
-    global glo_lock
-    global MON_PORTS
-    global MONWEB_INTERVAL
+    '''
     global server_key
     server_key = Fernet.generate_key()
+    global fernet_obj
+    fernet_obj = Fernet(server_key)
+    global glo_lock
     glo_lock = threading.Lock()
-    dict_ipinfo = {}
-    #dict_alarms_monweb = {}
-    dict_alarms = {}
-    dict_ports = {}
-    dict_monweb = {}
 
-    dict_ipinfo = Sync_Db('Ip',sql_ipinfo)
-    dict_alarms = Sync_Db('id',sql_alarms)
-    #dict_alarms_monweb = Sync_Db('id',sql_alarms_monweb)
-    dict_ports = Sync_Db('id',sql_ports)
-    dict_monweb = Sync_Db('id',sql_monweb)
-    dict_sys_config = Sync_Db('KeyName',sql_sys_config);
-    MON_PORTS = '(' + dict_sys_config.get('def_mon_ports',{'KeyValue':DEF_MON_PORTS}).get('KeyValue') + ')'
-    MONWEB_INTERVAL = int(dict_sys_config.get('monweb_interval',{'KeyValue':str(DEF_MONWEB_INTERVAL)}).get('KeyValue'))
+    Sync_Db_Ipinfo()
+    Sync_Db_Alarms()
+    Sync_Db_Sys_Config()
+    Sync_Db_Monweb()
+    Sync_Db_Ports()
+
     
 
 def Sync_Db(key,sql):
@@ -1666,6 +1692,19 @@ def Sync_Db_Alarms():
     sql_alarms = "select * from alarms where IsBeOk=0 and Type!='monweb'"
     global dict_alarms
     dict_alarms = Sync_Db('id',sql_alarms)
+
+def Sync_Db_Ports():
+    sql_ports = "select ports.id,Ip,Port,ports.Status from ports left join ipinfo on ports.ipid=ipinfo.id where IsMon=1 and ipinfo.ip!='0.0.0.0'"
+    global dict_ports
+    dict_ports = Sync_Db('id',sql_ports)
+
+def Sync_Db_Sys_Config():
+    sql_sys_config = "select KeyName,KeyValue from sys_config where KeyName in('def_mon_ports','monweb_interval','norun_cmd')";
+    dict_sys_config = Sync_Db('KeyName',sql_sys_config);
+    global MON_PORTS,NORUN_CMD,MONWEB_INTERVAL
+    MON_PORTS = '(' + dict_sys_config.get('def_mon_ports',{'KeyValue':DEF_MON_PORTS}).get('KeyValue') + ')'
+    NORUN_CMD = dict_sys_config.get('norun_cmd',{'KeyValue':DEF_MON_PORTS}).get('KeyValue').split(',')
+    MONWEB_INTERVAL = int(dict_sys_config.get('monweb_interval',{'KeyValue':str(DEF_MONWEB_INTERVAL)}).get('KeyValue'))
 
 def Sync_Db_Monweb():
     sql_monweb = "select id,MonUrl,RstCode,Gid,(select group_concat(id) from alarms where Ipid=monweb.id and IsBeOk=0) as Alarms_Ids from monweb  where Enable = 1"
@@ -1715,7 +1754,7 @@ class My_daemon(Daemon):
         conn = Db_connect()
         if conn:
             Init()
-            Check_Devinfo_All()
+            #Check_Devinfo_All()
             Ipid_rs = Select('select id from ipinfo order by id desc limit 1')
             Alarm_rs = Select('select id from alarms order by id desc limit 1')
             global MaxIpid
@@ -1730,6 +1769,12 @@ class My_daemon(Daemon):
                 else:
                     MaxAlarmId = 0
                 glo_lock.release()
+            update_client_key_thread = threading.Thread(target = Update_Client_Key_All)
+            update_client_key_thread.setDaemon(True)
+            update_client_key_thread.start()
+            check_devinfo_thread = threading.Thread(target = Check_Devinfo_All)
+            check_devinfo_thread.setDaemon(True)
+            check_devinfo_thread.start()
             cron_do_thread = threading.Thread(target = Cron_Do)
             cron_do_thread.setDaemon(True)
             cron_do_thread.start()
@@ -1743,6 +1788,7 @@ class My_daemon(Daemon):
             check_alive_thread.setDaemon(True)
             check_alive_thread.start()
             Listen_Client()
+            print("ssssssssssssssssssssssssssssssssssssssss")
         else:
             print( "Try connect mysql false, please check it!")
 
