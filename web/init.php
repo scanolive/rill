@@ -82,6 +82,13 @@ function test_user()
 
 $test_db = test_db();
 $test_phpsocket = test_phpsocket();
+
+if ($test_db == "OK")
+{
+	$sql = "select KeyValue from sys_config where KeyName='upfile_dir';";
+	$UPFILE_DIR = getrs($sql)[0][0];
+}	
+
 if(!is_writable($UPFILE_DIR))
 {
 	$test_upload_dir = "NO"; 	
