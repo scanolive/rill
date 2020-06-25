@@ -467,7 +467,7 @@ CREATE TABLE `sys_config` (
   `Uid` char(24) DEFAULT 'NoUid',
   `CfgType` char(24) NOT NULL,
   `KeyName` char(30) NOT NULL,
-  `KeyValue` char(30) NOT NULL,
+  `KeyValue` char(120) NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=MyISAM AUTO_INCREMENT=23 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;

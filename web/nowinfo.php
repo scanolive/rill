@@ -6,7 +6,6 @@ $END_STR = $_SESSION['python_end_str'];
 $SEP_STR = $_SESSION['python_sep_str'];
 $SEP_STR_SE = $_SESSION['python_sep_str_se'];
 $NORUN_CMD_ARR = $_SESSION['norun_cmd_arr'];
-echo 
 
 $group = ($_GET['group']);
 error_reporting(0);  

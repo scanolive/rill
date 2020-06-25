@@ -85,7 +85,7 @@ if (!empty($_POST['bg_result']) and !empty($_POST['err_logs']) and !empty($_POST
 	$_SESSION['python_server_ip'] = $python_server_ip;
 	$_SESSION['python_server_port'] = $python_server_port;
 	$_SESSION['php_timeout'] = $php_timeout;
-	
+	$_SESSION['norun_cmd_arr'] = explode(',',$norun_cmd);	
 	
 	
 	alert_go("修改成功","index.php");

@@ -65,7 +65,7 @@ else
 }	
  
 $main_cmd = $cmd;
-$main_cmd_arr = split(" ",$cmd);
+$main_cmd_arr = explode(" ",$cmd);
 if (!in_array($main_cmd_arr[0],$NORUN_CMD_ARR) and ($client_status == "1") and ($s_u_level < 3  or $own_ip_yorn) and $verify_str == $_SESSION['verify_str'])
 {
 	$socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
@@ -79,7 +79,7 @@ if (!in_array($main_cmd_arr[0],$NORUN_CMD_ARR) and ($client_status == "1") and (
    		echo "  run   ";
 	}
 	$result = socket_connect($socket, $s_s_server_ip , $s_s_server_port);
-	$cmd_arr = split($SEP_STR_SE,$cmd);
+	$cmd_arr = explode($SEP_STR_SE,$cmd);
 	if (count($cmd_arr)>1)
 		echo $cmd_arr[2];
 	else

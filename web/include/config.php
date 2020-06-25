@@ -1,12 +1,6 @@
 <?php
 include 'include/db_config.php';
 
-if(!function_exists('split')){
-	function split($a,$b){
-		return preg_split($a,$b);
-	}
-}
-
 if(!function_exists('mysql_connect')){
     function mysql_connect($dbhost, $dbuser, $dbpass){
         global $dbport;
