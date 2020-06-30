@@ -24,11 +24,15 @@ import random
 #import base64
 import hashlib
 import datetime
-if sys.version_info.major == 2:
-    reload(sys)
-    sys.setdefaultencoding('utf-8')
+try:
+    import pymysql as MySQL
+    from pymysql import cursors as mysql_cur
+except:
     import MySQLdb as MySQL
     from MySQLdb import cursors as mysql_cur
+if sys.version_info[0] == 2:
+    reload(sys)
+    sys.setdefaultencoding('utf-8')
     import urllib2 as url_req
     def pickle_loads(obj):
         return pickle.loads(obj)
@@ -42,8 +46,6 @@ if sys.version_info.major == 2:
         return s
 else:
     import urllib.request as url_req
-    import pymysql as MySQL
-    from pymysql import cursors as mysql_cur
     def pickle_loads(obj):
          return pickle.loads(obj,encoding='bytes')
     def bytes2str(bytes_or_str):
@@ -1547,6 +1549,9 @@ def Listen_Client():
                     elif cmd == "Sync_Db_Alarms":
                         time.sleep(2)
                         Sync_Db_Alarms()
+                    elif cmd == "Sync_Db_Sys_Config":
+                        time.sleep(2)
+                        Sync_Db_Sys_Config()
                     elif cmd == "Sync_Db_IpAlarms":
                         time.sleep(2)
                         Sync_Db_Ipinfo()

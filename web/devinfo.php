@@ -111,7 +111,7 @@ else
 	$vendor_rs = getrs($vendor_rs_sql);
 	$model_rs = getrs($model_rs_sql);
 	$IDC_rs = getrs($IDC_rs_sql);
-	$sql = "select SN,HostName,DevName,ipgroup.GroupName,ipinfo.ip,replace(ips,ipinfo.ip,''),concat(Vendor,'-',Model),Disk,Memory,concat_ws('',substring(Cpu_Model,23,10),'|',Cpu_Num,'/',devinfo.Cpu_Pro),concat(Idc,'/',Place),Enable,devinfo.id,ipgroup.id from devinfo Left Join ipinfo ON ipinfo.id=devinfo.Ipid Left Join ipgroup ON ipgroup.id = ipinfo.GroupId  where ipinfo.GroupId in $gids $SN_sql $model_sql $vendor_sql $IDC_sql $searchip_sql $enable_sql";
+	$sql = "select SN,OS,HOSTNAME,DevName,ipgroup.GroupName,ipinfo.ip,replace(ips,ipinfo.ip,''),concat(Vendor,'-',Model),Disk,Memory,concat_ws('',substring(Cpu_Model,23,10),'|',Cpu_Num,'/',devinfo.Cpu_Pro),concat(Idc,'/',Place),Enable,devinfo.id,ipgroup.id from devinfo Left Join ipinfo ON ipinfo.id=devinfo.Ipid Left Join ipgroup ON ipgroup.id = ipinfo.GroupId  where ipinfo.GroupId in $gids $SN_sql $model_sql $vendor_sql $IDC_sql $searchip_sql $enable_sql";
 	$sql_num = "select count(SN) from devinfo Left Join ipinfo ON ipinfo.id=devinfo.Ipid Left Join ipgroup ON ipgroup.id = ipinfo.GroupId  where ipinfo.GroupId in $gids $SN_sql $model_sql $vendor_sql $IDC_sql $searchip_sql $enable_sql";
 $pagesize = $_SESSION['devinfo_pagesize'];
 $num_all = getrs($sql_num);
@@ -348,6 +348,7 @@ else
               <tr>
                 <td height="26" >NUM</td>
                 <td >SN</td>
+                <td>操作系统</td>
                 <td>主机名</td>
                 <td>设备备注</td>
                 <td>分组</td>
@@ -371,13 +372,13 @@ for( $i=0;$i<count($dev);$i++ )
 	echo "<td class=Ptable>";	
 	echo $i+1;
 	echo "</td>";
-	if ($dev[$i][11] == 1)
+	if ($dev[$i][12] == 1)
 	{
-		$dev[$i][11] = "启用";
+		$dev[$i][12] = "启用";
 	}
 	else
 	{
-		$dev[$i][11] = "禁用";
+		$dev[$i][12] = "禁用";
 	}		
 	for( $j=0;$j<count($dev[0])/2-2;$j++ )
 	{ 
@@ -387,8 +388,8 @@ for( $i=0;$i<count($dev);$i++ )
 	}
 	if ( $s_u_level < 4)
 	{		
-		echo '<td ><a href="dev_update.php?ip='.$dev[$i][4];
-		echo '&group='.$dev[$i][13];
+		echo '<td ><a href="dev_update.php?ip='.$dev[$i][5];
+		echo '&group='.$dev[$i][14];
 		echo '&url='.str_replace("&","!@!", $url_now);
 		echo '">编辑</a></td>';
 	}

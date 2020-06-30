@@ -19,7 +19,7 @@ import rsa
 import pickle
 from cryptography.fernet import Fernet
 
-if sys.version_info.major == 2:
+if sys.version_info[0] == 2:
     reload(sys)
     sys.setdefaultencoding('utf-8')
     def pickle_loads(obj):
@@ -55,7 +55,7 @@ END_CMD_STR = 'OLIVE_EOC'
 
 #--------------------------系统配置-------------------------
 #server端IP,端口,client端口,必须修改
-SERVER_IP = '192.168.123.81'
+SERVER_IP = 'xxx.xxx.xxx.xxx'
 SERVER_IPS = [SERVER_IP]
 SERVER_PORT = 33331
 BIND_PORT = 22221
@@ -361,6 +361,9 @@ def Get_Client_Ip():
         return ['UNKNOWN_ERR','0.0.0.0']
 
 def Test_Server():
+    if SERVER_IP == "XXX.XXX.XXX.XXX".lower():
+        print("SERVER_IP is not config")
+        sys.exit(1)
     if AUTO_GET_SHFILE != 'YES':
         if os.path.isfile(SH_DIR+'/mon_all_stat') and os.path.isdir(SH_DIR) and len(os.listdir(SH_DIR)) > 5:
             pass

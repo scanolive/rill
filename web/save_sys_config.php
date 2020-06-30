@@ -88,6 +88,7 @@ if (!empty($_POST['bg_result']) and !empty($_POST['err_logs']) and !empty($_POST
 	$_SESSION['norun_cmd_arr'] = explode(',',$norun_cmd);	
 	
 	
+	echo '<script language="javascript">showHint_socket("Sync_Db_Sys_Config","OLIVE_SERVER","'.$_SESSION['verify_str'].'") </script>';
 	alert_go("修改成功","index.php");
 }
 else

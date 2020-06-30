@@ -86,7 +86,7 @@ string;
 <meta http-equiv="X-UA-Compatible" content="IE=7">
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 <link href="css/style.css" rel="stylesheet" type="text/css">
-<title><?php echo $TITLE_NAME."-";?>初始化数据库</title></head>
+<title>配置数据库</title></head>
 <body>
 <br />
 <br />
