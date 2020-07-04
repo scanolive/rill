@@ -1680,9 +1680,9 @@ def Init():
     
 
 def Sync_Db(key,sql):
+    dict_local = {}
     rs = Select(sql,'dict')
     if rs[0]:
-        dict_local = {}
         for i in rs[1]:
             k = i.get(key)
             dict_local[k] = i
