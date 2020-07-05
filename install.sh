@@ -1,6 +1,6 @@
 #!/bin/bash
 
-function test_os()
+function check_os()
 {
 	if [[ -f '/etc/debian_version'  ]];then
 		echo "debian"
@@ -239,7 +239,7 @@ function sed_client_ip()
 	echo ""
 }
 
-os=`test_os`
+os=`check_os`
 py_version=`get_python_version`
 module="rsa cryptography"
 #check_epel_repo

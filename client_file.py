@@ -47,7 +47,6 @@ else:
 #ENCRYPT_MODE = "RSA_KEY"
 ENCRYPT_MODE = "CUSTOM"
 AUTH_KEY = 17
-JAMSTR = '!@!'
 ENCODE_END_STR = 'OLIVE_EOS'
 END_CMD_STR = 'OLIVE_EOC'
 #--------------------------加密配置--------------------------
