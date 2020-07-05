@@ -14,14 +14,11 @@ from signal import SIGTERM
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
-from cryptography.fernet import Fernet
-import rsa
 import pickle
 import subprocess
 import smtplib
 import string
 import random
-#import base64
 import hashlib
 import datetime
 try:
@@ -66,9 +63,9 @@ DB_PORT = 3306
 #UNIX_SOCKET = '/tmp/mysql.sock'
 
 #加密配置,请配置客户端于此保持一致 建议修改
+#ENCRYPT_MODE = "RSA_KEY"
+ENCRYPT_MODE = "CUSTOM"
 AUTH_KEY = 17
-#OFFSET = 17
-JAMSTR = '!@!'
 ENCODE_END_STR = 'OLIVE_EOS'
 
 #用于字符串分解,须与OCT和PHP一致 建议修改
@@ -112,11 +109,22 @@ PAGE_SIZE = 4096
 #定义函数
 '''-----------------------------------------------------------------------------------------'''
 
-
 #加密解密函数
 
-'''
-def encrypt(s):
+if ENCRYPT_MODE == "RSA_KEY":
+    import rsa
+    from cryptography.fernet import Fernet
+    def encrypt(s_str):
+        return encrypt_key(s_str)
+    def decrypt(s_str):
+        return decrypt_key(s_str)
+else:
+    def encrypt(s_str):
+        return encrypt_custom(s_str)
+    def decrypt(s_str):
+        return decrypt_custom(s_str)
+
+def encrypt_custom(s):
     key = AUTH_KEY
     b = bytearray(str(s).encode("utf-8"))
     n = len(b)
@@ -135,8 +143,7 @@ def encrypt(s):
     c = c + ENCODE_END_STR.encode()
     return c
 
-
-def decrypt(s):
+def decrypt_custom(s):
     s = s.rstrip(ENCODE_END_STR)
     if s.endswith(END_CMD_STR):
         return s.decode("utf-8")
@@ -159,22 +166,17 @@ def decrypt(s):
         b[i] = b1
     b = b.decode("utf-8")
     return b.strip()
-'''
 
-def decrypt(s):
-    #print('jiemi',s)
+def decrypt_key(s):
     s = s.replace(ENCODE_END_STR,'')
     if s.endswith(END_CMD_STR):
         return s.decode("utf-8")
     c = fernet_obj.decrypt(s.encode())
     return c.decode("utf-8")
 
-def encrypt(s):
-    #print('jiami',s)
-    #f = Fernet(server_key)
+def encrypt_key(s):
     c = fernet_obj.encrypt(s.encode("utf-8"))
     c = c + ENCODE_END_STR.encode("utf-8")
-    #print(c)
     return c
 
 #随机函数
@@ -186,7 +188,6 @@ def random_time():
 #获取本机所有ip的函数
 def get_all_ips():
     cmd = "ip -4 address | grep ' inet ' | grep -vE 'docker0|tun' |awk '{print $2}'|awk -F '/' '{print $1}'"
-    #cmd = "ifconfig|grep 'inet addr:'|grep -v '255.255.255.255'|cut -d: -f2|awk '{ print $1}'"
     dae = subprocess.Popen(cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True)
     Cmd_Run_Err = dae.stderr.read().decode()
     Cmd_Run_Out = dae.stdout.read().decode()
@@ -271,7 +272,6 @@ def Save_Log(log_type, data):
     f.write(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()) + '|' + log_type + '|' + str(data) + '\n')
     f.close()
     try:
-        #conn = MySQL.connect(host=DB_HOST,db=DB_NAME,user=DB_USER,passwd=DB_PASSWD,port=DB_PORT,unix_socket=UNIX_SOCKET)
         conn = MySQL.connect(host=DB_HOST,db=DB_NAME,user=DB_USER,passwd=DB_PASSWD,port=DB_PORT)
     except Exception  as e:
         conn = False
@@ -511,7 +511,6 @@ def Select(*args):
 #数据库操作函数，参数为insert或update语句，可以为列表或字符串，返回操作结果
 
 def Do_Sqls(sqls):
-    #if type(sqls) is types.StringType:
     if not isinstance(sqls,list):
         sqls = sqls.split('!@#$%^&*')
     conn = Db_connect()
@@ -551,7 +550,6 @@ def Cron_Do():
         else:
             pass
         time.sleep(40)
-        #Init()
 
 
 def List_Rs(in_rs,n):
@@ -575,7 +573,6 @@ def Send_Alarm(alarm_id):
     conn = Db_connect()
     if conn:
         conn.close()
-        #alarm = dict_alarms_monweb.get(int(alarm_id),{})
         alarm = dict_alarms.get(int(alarm_id),{})
         if alarm:
             alarm_msg = alarm['Msg']
@@ -630,9 +627,6 @@ def Get_Alarm_Id(ip,alarm_type):
     ipid = Get_Ipid(ip)
     get_alarm_id_sql = "select id from alarms where Ipid='"+str(ipid)+"' and Type='"+alarm_type+"' and IsBeOk=0 and IsAlarm=1 order by id desc limit 1"
     rs = Select(get_alarm_id_sql,'dict')
-
-
-
 
 
 #发送报警函数，间隔查询数据库，取得报警信息并发送
@@ -947,7 +941,6 @@ def Ping_Ip(ip):
     else:
         return 'down'
 
-
 def Get_Alarms_rs(ip):
     alarms_ids = dict_ipinfo.get(ip,{}).get('Alarms_Ids',None)
     alarms_ids_rs = []
@@ -956,7 +949,6 @@ def Get_Alarms_rs(ip):
             alarms_ids_rs.append(dict_alarms.get(int(i),{}).get('Type',''))
     return alarms_ids_rs
     
-
 #主函数之一，检测主机网络状态的函数
 def Check_Alive():
     time.sleep(4)
@@ -1058,7 +1050,6 @@ def Update_Client_Key(address, port):
 def Monweb():
     def check_url(monweb_id,url,status_now,mutex):
         url_host = url.split('/')[2]
-        #if Ping_Ip(url_host) == 'alive':
         if True:
             try:
                 rstcode = url_req.urlopen(url,data=None,timeout=TIMEOUT).getcode()
@@ -1114,14 +1105,10 @@ def Monweb():
             Save_Log('check_url',url_host+' ping err')
 
     while True:
-                #sql_monweb = "select id,MonUrl,RstCode,Gid,(select group_concat(id) from alarms where Ipid=monweb.id and IsBeOk=0) as Alarms_Ids from monweb  where Enable = 1"
-                #dict_monweb = Sync_Db('id',sql_monweb)
         for k,v in dict_monweb.items():
             monweb_id = k
             url = v.get('MonUrl','')
             status_now = v.get('RstCode')
-                        #if status_now is None:
-                        #        status_now = 200
             mutex = threading.Lock() 
             check_do = threading.Thread(target=check_url,args=(monweb_id,url,status_now,mutex))
             check_do.setDaemon(True)
@@ -1345,7 +1332,6 @@ def Check_Devinfo_All():
                 Check_Devinfo(ip,ipid)
         else:
              pass
-             #Save_Log('Check_Devinfo_All','can not get ip_list for db!')
     else:
          Save_Log('Check_Devinfo_All','can not get ip_list for db!')
 def Recv_Data(socket):
@@ -1453,7 +1439,6 @@ def Do_Oct_Cmd(ip,cmd,mutex):
         Check_Service(ip,ipid)
         result_msg = ip + ' have check service'
     elif cmd.startswith('CPFILE'):
-#        with mutex:
         local_file = cmd.split()[1]
         remote_file = cmd.split()[2]
         if not os.path.isfile(local_file):
@@ -1507,9 +1492,7 @@ def Listen_Client():
             connect,addr = s.accept()
             client_ip = addr[0]
             rev_data = connect.recv(65536)
-            #print(rev_data)
             rev_data = rev_data.decode()
-            #print(type(rev_data))
             if rev_data.endswith(ENCODE_END_STR):
                 rev_data = decrypt(rev_data)
                 if len(rev_data.split(SEP_STR))>=3:
@@ -1563,23 +1546,28 @@ def Listen_Client():
                         Save_Log('OLIVE_SERVER_DO',' try to do ' + cmd )
 
             elif rev_data == 'I love rill':
-                connect.send(("Me tooooooooooooooooooooooooooo").encode())
-                client_public_key, client_public_key_sha256 = pickle_loads(connect.recv(1024))
-                client_public_key_sha256 = bytes2str(client_public_key_sha256)
-                if hashlib.sha256(client_public_key).hexdigest() != client_public_key_sha256:
-                    raise Exception("key is err")
+                if ENCRYPT_MODE == "RSA_KEY":
+                    connect.send(("Me tooooooooooooooooooooooooooo").encode())
+                    client_public_key, client_public_key_sha256 = pickle_loads(connect.recv(1024))
+                    client_public_key_sha256 = bytes2str(client_public_key_sha256)
+                    if hashlib.sha256(client_public_key).hexdigest() != client_public_key_sha256:
+                        raise Exception("key is err")
+                    else:
+                        client_public_key = pickle_loads(client_public_key)
+                        en_server_key = rsa.encrypt(pickle.dumps(server_key,protocol=2), client_public_key)
+                        en_server_key_sha256 = hashlib.sha256(en_server_key).hexdigest()
+                        connect.send(pickle.dumps((en_server_key,en_server_key_sha256),protocol=2))
                 else:
-                    client_public_key = pickle_loads(client_public_key)
-                    en_server_key = rsa.encrypt(pickle.dumps(server_key,protocol=2), client_public_key)
-                    en_server_key_sha256 = hashlib.sha256(en_server_key).hexdigest()
-                    connect.send(pickle.dumps((en_server_key,en_server_key_sha256),protocol=2))
+                    pass
+
             elif rev_data == "":
                 pass
+
             else:
                 Save_Log('Listen_Client',client_ip + ' try to do something ' + rev_data)
             connect.close()
+
         except Exception as e:
-            #print(e)
             Save_Log('Listen_Client',str(e))
 #基本的守护进程类
 class Daemon:
@@ -1750,16 +1738,12 @@ def Add_Dict(dict_name,db_table,key,data):
     Do_Sqls(insert_sql[:-1])
 
 
-
-
-
 #自定义守护进程类，重新run函数
 class My_daemon(Daemon):
     def run(self):
         conn = Db_connect()
         if conn:
             Init()
-            #Check_Devinfo_All()
             Ipid_rs = Select('select id from ipinfo order by id desc limit 1')
             Alarm_rs = Select('select id from alarms order by id desc limit 1')
             global MaxIpid
@@ -1774,9 +1758,10 @@ class My_daemon(Daemon):
                 else:
                     MaxAlarmId = 0
                 glo_lock.release()
-            update_client_key_thread = threading.Thread(target = Update_Client_Key_All)
-            update_client_key_thread.setDaemon(True)
-            update_client_key_thread.start()
+            if ENCRYPT_MODE == "RSA_KEY":
+                update_client_key_thread = threading.Thread(target = Update_Client_Key_All)
+                update_client_key_thread.setDaemon(True)
+                update_client_key_thread.start()
             check_devinfo_thread = threading.Thread(target = Check_Devinfo_All)
             check_devinfo_thread.setDaemon(True)
             check_devinfo_thread.start()
@@ -1793,7 +1778,6 @@ class My_daemon(Daemon):
             check_alive_thread.setDaemon(True)
             check_alive_thread.start()
             Listen_Client()
-            print("ssssssssssssssssssssssssssssssssssssssss")
         else:
             print( "Try connect mysql false, please check it!")
 

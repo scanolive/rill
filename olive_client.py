@@ -14,7 +14,6 @@ import zipfile
 import string
 import random
 import hashlib
-import base64
 import rsa
 import pickle
 from cryptography.fernet import Fernet
@@ -45,9 +44,9 @@ else:
 
 #--------------------------加密配置--------------------------
 #加密解密配置,请与服务器端一致
+#ENCRYPT_MODE = "RSA_KEY"
+ENCRYPT_MODE = "CUSTOM"
 AUTH_KEY = 17
-#OFFSET = 17
-JAMSTR = '!@!'
 ENCODE_END_STR = 'OLIVE_EOS'
 END_CMD_STR = 'OLIVE_EOC'
 #--------------------------加密配置--------------------------
@@ -126,27 +125,24 @@ RUN_STATE = True
 ENCODE_END_BYTE = ENCODE_END_STR.encode()
 
 
-#---------------------------生成rsa密钥---------------------
-
-RSA_KEY = rsa.newkeys(1024)
-
-
 #加密函数
-'''
-def encode(s_str):
-    if sys.version_info.major == 2:
-        return encode2(s_str)
-    else:
-        return encode3(s_str)
-def decode(s_str):
-    if sys.version_info.major == 2:
-        return decode2(s_str)
-    else:
-        return decode3(s_str)
-'''
 
-'''
-def encrypt(s):
+if ENCRYPT_MODE == "RSA_KEY":
+    import rsa
+    from cryptography.fernet import Fernet
+    RSA_KEY = rsa.newkeys(1024)
+    def encrypt(s_str):
+        return encrypt_key(s_str)
+    def decrypt(s_str):
+        return decrypt_key(s_str)
+else:
+    def encrypt(s_str):
+        return encrypt_custom(s_str)
+    def decrypt(s_str):
+        return decrypt_custom(s_str)
+
+
+def encrypt_custom(s):
     key = AUTH_KEY
     b = bytearray(str(s).encode("utf-8"))
     n = len(b)
@@ -164,10 +160,8 @@ def encrypt(s):
         j = j+2
     c = c + ENCODE_END_STR.encode("utf-8")
     return c
-    #return c.decode("utf-8")
 
-
-def decrypt(s):
+def decrypt_custom(s):
     key = AUTH_KEY
     
     s = s.decode().rstrip(ENCODE_END_STR)
@@ -189,29 +183,21 @@ def decrypt(s):
         b[i] = b1
     return b.decode("utf-8")
 
-'''
 
-def decrypt(s):
+def decrypt_key(s):
     global fernet_obj
     s = s.decode().replace(ENCODE_END_STR,'')
     if s.endswith(END_CMD_STR):
-        print(s)
-        print('----------------------------------------------------------------------------------------------')
         return s.decode("utf-8")
-    #f = Fernet(server_key)
     try:
         c = fernet_obj.decrypt(s.encode("utf-8"))
     except Exception as e:
-        print(e)
         fernet_obj = Get_server_key(SERVER_IP,SERVER_PORT)
-        print(fernet_obj)
         c = b""
     return c.decode("utf-8")
 
 
-def encrypt(s):
-    #print('jiami',s)
-    #f = Fernet(server_key)
+def encrypt_key(s):
     c = fernet_obj.encrypt(s.encode("utf-8"))
     c = c + ENCODE_END_STR.encode("utf-8")
     return c
@@ -265,18 +251,6 @@ class Daemon:
         os.remove(self.pidfile)
 
     def    start(self):
-        '''    
-        try:
-            pf = file(self.pidfile,'r')
-            pid = int(pf.read().strip())
-            pf.close()
-        except IOError: as 
-            pid = None
-        if pid:
-            message = "Start error,pidfile %s already exist. Daemon already running?\n"
-            sys.stderr.write(message % self.pidfile)
-            sys.exit(1)
-        '''
         check_process_cmd = 'ps -ef|grep -v "grep"|grep "' + self.process_name +'"'
         check_procees_res = subprocess.call([check_process_cmd],stdout=subprocess.PIPE,shell=True)
         check_listen_cmd = "ss -4tlnp|awk '{print $4}'|grep " + str(BIND_PORT)
@@ -386,21 +360,24 @@ def Test_Server():
         Warn_Msg = ''
     if Warn_Msg != '':
         print( 'Warning! ' + Warn_Msg)
-    print( 'Testing connect to the server %s:%d, please wait a moment' % (SERVER_IP,SERVER_PORT) )
+    print('Testing connect to the server %s:%d, please wait a moment' % (SERVER_IP,SERVER_PORT))
     if Ping_Ip(SERVER_IP) == 'down':
-        print( 'OLIVE_SERVER:' + SERVER_IP + ' unreachable,please check the network')
+        print('OLIVE_SERVER:' + SERVER_IP + ' unreachable,please check the network')
         sys.exit(1)
-    #global server_key
-    global fernet_obj
-    fernet_obj = Get_server_key(SERVER_IP,SERVER_PORT)
-    #print(server_key)
-    #fernet_obj = Fernet(server_key)
-    if not fernet_obj:
-        print( 'OLIVE_PORT:' + str(SERVER_PORT) +' or get server key is Err,please check olive_server port')
-        sys.exit(1)
+    if ENCRYPT_MODE == "RSA_KEY":
+        global fernet_obj
+        fernet_obj = Get_server_key(SERVER_IP,SERVER_PORT)
+        if not fernet_obj:
+            print('OLIVE_PORT:' + str(SERVER_PORT) +' or get server key is Err,please check olive_server port')
+            sys.exit(1)
+        else:
+            print('Test Connection Successful OLIVE_CLIENT is running listen ' + Client_Ip + ':' + str(BIND_PORT))
     else:
-        print( 'Test Connection Successful OLIVE_CLIENT is running listen ' + Client_Ip + ':' + str(BIND_PORT) )
-
+        if Check_Port(SERVER_IP, SERVER_PORT) == False:
+            print('OLIVE_PORT:' + str(SERVER_PORT) +' or get server key is Err,please check olive_server port')
+            sys.exit(1)
+        else:
+            print('Test Connection Successful OLIVE_CLIENT is running listen ' + Client_Ip + ':' + str(BIND_PORT))
 
 #检测端口存活函数，参数ip和端口
 def Get_server_key(address, port):
@@ -423,14 +400,6 @@ def Get_server_key(address, port):
             s.send(pickle.dumps((send_key, send_key_sha256),protocol=2))
             server_key, server_key_sha256 = pickle_loads(s.recv(1024))
             server_key_sha256 = bytes2str(server_key_sha256)
-            #print(type(server_key_sha256))
-            #print(type(server_key))
-            #revsymKey, symKeySha256 = pickle.loads(s.recv(1024))
-            #print('revsymKey',revsymKey)
-            #print(type(hashlib.sha256(server_key).hexdigest()))
-            #print(type(server_key_sha256))
-            #print(hashlib.sha256(server_key).hexdigest())
-            #print(server_key_sha256)
             if hashlib.sha256(server_key).hexdigest() != server_key_sha256:
                 raise Exception("key is err")
             else:
@@ -461,7 +430,6 @@ def Recv_File(newsock,savename,overwrite):
                 while 1:
                     if restsize > 1024:
                         tmp_str = FILE_DATA_SOCK.recv(1024)
-                    #    print( len(tmp_str))
                         filedata = filedata + tmp_str
                     else:
                         tmp_str = FILE_DATA_SOCK.recv(restsize)
@@ -471,23 +439,18 @@ def Recv_File(newsock,savename,overwrite):
                             filedata = filedata + tmp_str
                         break
                     restsize = int(b_size) - len(filedata)
-#                    if restsize <= 0: break
                     if len(filedata) == int(b_size):break
                 m = hashlib.md5()
                 m.update(filedata)
                 md5str = m.hexdigest()
                 if md5str == r_md5str:
                     ctrl_socket.send(encrypt('data is OK'))
-#                    if len(filedata) < 1024000:
-#                            print( filedata)
                     fp.write(filedata)
                 else:
                     FILE_DATA_SOCK.close()
                     ctrl_socket.send(encrypt('data is err'))
                     time.sleep(1)
                     ctrl_socket.send(encrypt('Please send data'))
-#        elif recv_str == "send done":
-#            socket.send(encrypt('recv done'))
             else:
                 break        
         fp.flush()
@@ -504,7 +467,6 @@ def Recv_File(newsock,savename,overwrite):
     FILEINFO_SIZE = struct.calcsize('128sI')
     try:
         fhead = newsock.recv(FILEINFO_SIZE)
-        #print(fhead)
         newsock.send(encrypt('can be send'))
         filename, filesize = struct.unpack('128sI', fhead)
         filename = filename.decode().strip('\00')
@@ -518,7 +480,6 @@ def Recv_File(newsock,savename,overwrite):
             savename = savename + '_' + timenow
         recv_num = 0
         while recv_num < 3:
-#            recvdata(savename)
             r_data(savename,newsock)
             recv_num = recv_num + 1
             recv_size = os.path.getsize(savename)
@@ -631,13 +592,11 @@ def Subprocess_Do(cmd):
     return cmd_result
 
 
-
 #监控任务函数
 def Mon_Task():
     time.sleep(3)
     while True:    
         cmd_ifnum = "ip -4 address | grep ' inet ' | grep -v '127.0.0.1\|\/32' |wc -l"
-        #cmd_ifnum = "ifconfig|grep 'inet addr:'|grep -v '127.0.0.1'|grep -v '255.255.255.255'|wc -l"
         ifnum = Subprocess_Do(cmd_ifnum)
         if ifnum[0] == 0:
             interval = 300.0 - 2.1*int(ifnum[1])
@@ -856,14 +815,13 @@ class My_daemon(Daemon):
             conn,addr = s.accept()
             if addr[0] in SERVER_IPS:
                 recv_byte = Recv_Data(conn)
-                #print(recv_byte)
                 recv_str = bytes2str(recv_byte)
-                #print('recv data ----------------> ',recv_str)
                 if recv_str == 'I love rill':
                     conn.close()
-                    time.sleep(3)
-                    global fernet_obj
-                    fernet_obj = Get_server_key(SERVER_IP,SERVER_PORT)
+                    if ENCRYPT_MODE == "RSA_KEY":
+                        time.sleep(3)
+                        global fernet_obj
+                        fernet_obj = Get_server_key(SERVER_IP,SERVER_PORT)
                 elif len(recv_byte) > 0 and recv_byte.endswith(ENCODE_END_BYTE):
                     recv_str = decrypt(recv_byte)
                     if recv_str.endswith(END_CMD_STR):

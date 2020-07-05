@@ -11,6 +11,13 @@ function test_os()
 	fi
 }
 
+function check_decrypt_mode()
+{
+	decrypt_mode=`grep '^ENCRYPT_MODE' olive_server.py |tr '"' "'" |awk -F "'" '{print $2}'`
+	echo $decrypt_mode		
+}
+
+
 function test_python_module()
 {
 	module_name=$1
@@ -236,7 +243,9 @@ os=`test_os`
 py_version=`get_python_version`
 module="rsa cryptography"
 #check_epel_repo
-install_py_module
+if  [[ `check_decrypt_mode` == "RSA_KEY" ]];then
+	install_py_module
+fi
 install_python-pymysql
 if [[ $? -eq 1 ]];then
 	install_python-mysqldb
