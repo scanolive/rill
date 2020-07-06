@@ -1,6 +1,59 @@
 <?php
-include 'include/config.php';
-$db_config_file = dirname(__FILE__)."/include/db_config.php";
+if(!function_exists('mysql_connect')){
+    function mysql_connect($dbhost, $dbuser, $dbpass){
+        global $dbport;
+        global $dbname;
+        global $mysqli;
+        $mysqli = mysqli_connect("$dbhost:$dbport", $dbuser, $dbpass, $dbname);
+        return $mysqli;
+        }
+    function mysql_select_db($dbname){
+        global $mysqli;
+        return mysqli_select_db($mysqli,$dbname);
+        }
+    function mysql_fetch_array($result){
+        return mysqli_fetch_array($result);
+        }
+    function mysql_fetch_assoc($result){
+        return mysqli_fetch_assoc($result);
+        }
+    function mysql_fetch_row($result){
+        return mysqli_fetch_row($result);
+        }
+    function mysql_query($query){
+        global $mysqli;
+        return mysqli_query($mysqli,$query);
+        }
+    function mysql_escape_string($data){
+        global $mysqli;
+        return mysqli_real_escape_string($mysqli, $data);
+        }
+    function mysql_real_escape_string($data){
+        return mysql_real_escape_string($data);
+        }
+    function mysql_close(){
+        global $mysqli;
+        return mysqli_close($mysqli);
+        }
+    function mysql_errno(){
+        global $mysqli;
+        return mysqli_errno($mysqli);
+        }
+    function mysql_error(){
+        global $mysqli;
+        return mysqli_error($mysqli);
+        }
+}
+
+function alert_go($msg,$url)
+{
+    echo "<script charset='UTF-8' language='javascript'>";
+    if ($msg !== "")
+    {
+        echo "alert('".$msg."');";
+    }
+    echo "window.location.href='".$url."';</script>";
+}
 function test_db($db_host,$db_port,$db_name,$db_username,$db_password)
 {
 	$conn = @mysql_connect($db_host.":".$db_port,$db_username,$db_password);
@@ -23,6 +76,7 @@ function test_db($db_host,$db_port,$db_name,$db_username,$db_password)
 		return $test_db;
 }
 
+$db_config_file = dirname(__FILE__)."/include/db_config.php";
 if (file_exists($db_config_file))
 {
 	include 'include/db_config.php';

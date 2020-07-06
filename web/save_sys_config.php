@@ -80,13 +80,24 @@ if (!empty($_POST['bg_result']) and !empty($_POST['err_logs']) and !empty($_POST
 	$_SESSION['monstate_pagesize'] = $monstate;
 	$_SESSION['monweb_pagesize'] = $monweb;
 	$_SESSION['batchdo_pagesize'] = $batchdo;
+
 	$_SESSION['ssh_enable'] = $ssh_enable;
 	$_SESSION['ctrl_center_enable'] = $ctrl_center_enable;
+
 	$_SESSION['python_server_ip'] = $python_server_ip;
 	$_SESSION['python_server_port'] = $python_server_port;
+	$_SESSION['python_oct_cmd_pre'] = $python_oct_cmd_pre;
+	$_SESSION['python_end_cmd_str'] = $python_end_cmd_str;
+	$_SESSION['python_end_str'] = $python_end_str;
+	$_SESSION['python_sep_str'] = $python_sep_str;
+	$_SESSION['python_sep_str_se'] = $python_sep_str_se;
+
 	$_SESSION['php_timeout'] = $php_timeout;
 	$_SESSION['norun_cmd_arr'] = explode(',',$norun_cmd);	
-	
+	$_SESSION['max_upfile_size'] = $max_upfile_size;
+	$_SESSION['upfile_dir'] = $upfile_dir;
+	$_SESSION['system_name'] = $system_name;
+
 	
 	echo '<script language="javascript">showHint_socket("Sync_Db_Sys_Config","OLIVE_SERVER","'.$_SESSION['verify_str'].'") </script>';
 	alert_go("修改成功","index.php");

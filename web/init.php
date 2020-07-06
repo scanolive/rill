@@ -147,8 +147,24 @@ $TITLE_NAME = getrs($sql)[0][0];
     <td><div align="right"><?php echo $test_upload_dir ; ?>&nbsp;&nbsp;&nbsp;</div></td>
   </tr>
   <tr>
-    <td height="24">&nbsp;</td>
+    <td height="24">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;默认post_max_size</td>
+    <td><div align="right"><?php echo ini_get("post_max_size") ; ?>&nbsp;&nbsp;&nbsp;</div></td>
+  </tr>
+  <tr>
+    <td height="24">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;默认upload_max_filesize</td>
+    <td><div align="right"><?php echo ini_get("upload_max_filesize") ; ?>&nbsp;&nbsp;&nbsp;</div></td>
+  </tr>
+  <tr>
+    <td height="10"></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td height="24">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<?php if (ini_get("upload_max_filesize") == "2M" or ini_get("post_max_size") == "8M") echo "<font color='red'>**** 默认upload_max_filesize和post_max_size值较小,建议在php.ini中修改 </font>" ; ?> </td>
     <td>&nbsp;</td>
+  </tr>
+  <tr>
+    <td height="10"></td>
+    <td></td>
   </tr>
 </table>
 <?php if ($test_db == "OK"  and  $test_phpsocket == "OK") {?>

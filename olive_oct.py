@@ -11,11 +11,9 @@ import struct
 import subprocess
 import zipfile
 import string
-import random
-import base64
+
 
 #加密配置,请配置server端于此保持一致 建议修改
-AUTH_KEY = 'aXA0YWkyOHdzO'
 OFFSET = '17'
 JAMSTR = '!@!'
 ENDSTR = 'OLIVE_EOS'

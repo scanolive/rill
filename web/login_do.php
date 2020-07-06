@@ -67,13 +67,13 @@ if (!empty($_POST['username']) and !empty($_POST['pwd']))
 		$_SESSION['monstate_pagesize'] = get_config("private","monstate_pagesize",$rs[0][1],$SYSCONFIG);
 		$_SESSION['monweb_pagesize'] = get_config("private","monweb_pagesize",$rs[0][1],$SYSCONFIG);
 		$_SESSION['batchdo_pagesize'] = get_config("private","batchdo_pagesize",$rs[0][1],$SYSCONFIG);
+
 		$_SESSION['ssh_enable'] = get_config("private","ssh_enable",$rs[0][1],$SYSCONFIG);
 		$_SESSION['ctrl_center_enable'] = get_config("private","ctrl_center_enable",$rs[0][1],$SYSCONFIG);
 		$_SESSION['verify_str'] = randstr(24);
+
 		$_SESSION['python_server_ip'] = $SYSCONFIG['python_server_ip'];
 		$_SESSION['python_server_port'] = $SYSCONFIG['python_server_port'];
-		$_SESSION['php_timeout'] = $SYSCONFIG['php_timeout'];
-
 		$_SESSION['python_oct_cmd_pre'] = $SYSCONFIG['python_oct_cmd_pre'];
 		$_SESSION['python_end_cmd_str'] = $SYSCONFIG['python_end_cmd_str'];
 		$_SESSION['python_end_str'] = $SYSCONFIG['python_end_str'];
@@ -84,6 +84,7 @@ if (!empty($_POST['username']) and !empty($_POST['pwd']))
 		$_SESSION['system_name'] = $SYSCONFIG['system_name'];
 		$_SESSION['norun_cmd_arr'] = explode(',',$SYSCONFIG['norun_cmd']);
 		$_SESSION['max_upfile_size'] = $SYSCONFIG['max_upfile_size'];
+		$_SESSION['php_timeout'] = $SYSCONFIG['php_timeout'];
 		
 
 		$client_ip = getip();

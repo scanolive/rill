@@ -54,18 +54,28 @@ else:
 
 #基本配置
 '''--------------------------------------------------------------------------------------'''
-#数据库配置 必须修改
+#--------------------------数据库配置--------------------------
+####数据库配置 必须修改
 DB_HOST = '127.0.0.1'
 DB_NAME = 'olive'
 DB_USER = 'olive'
 DB_PASSWD = 'olive'
 DB_PORT = 3306
 #UNIX_SOCKET = '/tmp/mysql.sock'
+#--------------------------数据库配置--------------------------
 
+
+#--------------------------加密配置--------------------------
 #加密配置,请配置客户端于此保持一致 建议修改
-#ENCRYPT_MODE = "RSA_KEY"
+#服务器和客户端通讯的加密方式,可选项为"CUSTOM"和"RSA_KEY"
+#"CUSTOM"为自定义加密方式,不用安装rsa和cryptography模块
+#"RSA_KEY"为密钥加密,需安装rsa和cryptography模块
 ENCRYPT_MODE = "CUSTOM"
-AUTH_KEY = 17
+
+#自定义加密key,取值范围1-256
+CUSTOM_KEY = 17
+
+#加密后结尾添加的字符串,用于判断数据传输是否完整
 ENCODE_END_STR = 'OLIVE_EOS'
 
 #用于字符串分解,须与OCT和PHP一致 建议修改
@@ -74,19 +84,11 @@ OCT_CMD_PRE = 'OLIVE_CTRL_CENTER_CMD'
 OCT_BAT_PRE = 'OLIVE_CTRL_CENTER_BAT'
 SEP_STR = '@!@'
 SEP_STR2 = "R!I@L#L"
-#页面监控,curl检测超时,根据需要修改
-TIMEOUT = 10
+#--------------------------加密配置--------------------------
 
-#绑定监听本机的IP,0.0.0.0为本机所有ip,根据需要修改
-BIND_IP = '0.0.0.0'
-#绑定监听本机的端口,建议修改
-BIND_PORT = 33331
-#客户端端口,建议修改
-CLIENT_PORT = 22221
-#客户端默认监控端口(如客户端开启有以下端口,则默认监控),若无法从数据库中获取则使用此值
-DEF_MON_PORTS = "80,3306,21,8080"
 
-#路径设置,根据需要修改
+#--------------------------路径配置--------------------------
+####路径设置,根据需要修改
 HOME_DIR = sys.path[0] + '/'
 SH_DIR = HOME_DIR + 'shell_file/'
 LOG_DIR = HOME_DIR + 'log/'
@@ -94,23 +96,45 @@ ZIPFILE_DIR = HOME_DIR + 'zipfile/'
 PIDFILE = HOME_DIR + 'my_server.pid'
 LOG_FILE = LOG_DIR + 'my_server.log'
 CLIENT_FILE = HOME_DIR + 'client_file.py'
+#--------------------------路径配置--------------------------
+
+
+#--------------------------系统配置--------------------------
+#绑定监听本机的IP,0.0.0.0为本机所有ip,根据需要修改
+BIND_IP = '0.0.0.0'
+
+#绑定监听本机的端口,建议修改
+BIND_PORT = 33331
+
+#客户端端口,建议修改
+CLIENT_PORT = 22221
+
+#客户端默认监控端口(如客户端开启有以下端口,则默认监控),若无法从数据库中获取则使用此值
+DEF_MON_PORTS = "80,3306,21,8080"
+
 #数据库中监控数据保存的天数,据需要修改
 EXPIRE_MONITOR_DAYS = 300
+
 #OCT(olive ctrl center)命令超时时间,单位秒,据需要修改
 OCT_TIMEOUT = 10
+
+#页面监控,curl检测超时,根据需要修改
+TIMEOUT = 10
+
 #monweb检测间隔默认值,若无法从数据库中获取则使用此值
 DEF_MONWEB_INTERVAL = 60
 
-
-
+#发送文件的块大小
 BLOCK_SIZE = 1024000
 PAGE_SIZE = 4096
+#--------------------------系统配置--------------------------
+
 
 #定义函数
 '''-----------------------------------------------------------------------------------------'''
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #加密解密函数
-
 if ENCRYPT_MODE == "RSA_KEY":
     import rsa
     from cryptography.fernet import Fernet
@@ -125,7 +149,7 @@ else:
         return decrypt_custom(s_str)
 
 def encrypt_custom(s):
-    key = AUTH_KEY
+    key = CUSTOM_KEY
     b = bytearray(str(s).encode("utf-8"))
     n = len(b)
     c = bytearray(n*2)
@@ -147,7 +171,7 @@ def decrypt_custom(s):
     s = s.rstrip(ENCODE_END_STR)
     if s.endswith(END_CMD_STR):
         return s.decode("utf-8")
-    key = AUTH_KEY
+    key = CUSTOM_KEY
     c = bytearray(str(s).encode("utf-8"))
     n = len(c)
     if n % 2 != 0:
@@ -178,13 +202,9 @@ def encrypt_key(s):
     c = fernet_obj.encrypt(s.encode("utf-8"))
     c = c + ENCODE_END_STR.encode("utf-8")
     return c
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-#随机函数
-def random_time():
-    a =  random.randint(1, 200)
-    b = a/2000.000
-    return b
-
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #获取本机所有ip的函数
 def get_all_ips():
     cmd = "ip -4 address | grep ' inet ' | grep -vE 'docker0|tun' |awk '{print $2}'|awk -F '/' '{print $1}'"
@@ -198,9 +218,10 @@ def get_all_ips():
         return Cmd_Run_Out.split()
     else:
         return ['127.0,0,1']
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #发送邮件函数，需要从数据库中取得用于发送邮件的帐号信息
-
 def Send_Mail(address,subject,content):
     sql = "select id,Name,Host,Port,Passwd,Address,SendName from mail_config limit 1"
     rs = Select(sql,'dict')
@@ -240,8 +261,9 @@ def Send_Mail(address,subject,content):
 
     else:
         Save_Log('Send_Mail','The Db hava not config for mail or address is null!')
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #发送短信的函数，参数为手机号和信息内容，其中手机号为列表和字符串，列表为多个手机号
 def Send_Message(mobiles,msg):
     Url = 'http://sms.tom.com/via/via_mt.php?send_time=1018514142&site_id=tomnet&sign=32d499a525c0d57d80d8bf015c97daa8&mobile_no='
@@ -261,7 +283,9 @@ def Send_Message(mobiles,msg):
                 Save_Log('Send_Message',str(e)+Url)
     else:
         Save_Log('Send_Message','send message URL is Err!')
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #保存日志函数，参数为日志类型和内容
 def Save_Log(log_type, data):
     logdir = LOG_DIR
@@ -289,6 +313,9 @@ def Save_Log(log_type, data):
             f.close()
     else:
         pass
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 def Purge_Monitor(days):
     sql = 'select Ipid from delipid where DelMon=0'
     delipid_rs = Select(sql)
@@ -308,7 +335,9 @@ def Purge_Monitor(days):
         Do_Sqls(purge_sql)
     else:
         pass
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #打包压缩函数，参数为目录和要压缩文件名
 def Zip_Dir(dirname,zipfilename):
     filelist = []
@@ -324,7 +353,9 @@ def Zip_Dir(dirname,zipfilename):
         arcname = tar[len(dirname):]
         zf.write(tar,arcname)
     zf.close()
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #解压缩函数，参数为压缩文件名和解压目录
 def Unzip_File(zipfilename,unziptodir):
     if not os.path.exists(unziptodir):
@@ -343,7 +374,9 @@ def Unzip_File(zipfilename,unziptodir):
             outfile = open(ext_filename,'wb')
             outfile.write(zfobj.read(name))
             outfile.close()
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #向客户端发送文件函数，参数为客户端ip和文件名
 def S_File(ip,filename,savename,filetype,overwrite):
     def S_Block(data,socket,b_size,p_size):
@@ -372,7 +405,9 @@ def S_File(ip,filename,savename,filetype,overwrite):
                     s_num = s_num + 1
         else:
             pass
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 def Send_File(ip,filename,savename,filetype,overwrite):
     def S_Block(data,ctrl_socket,data_socket,b_size,p_size,ip):
         m = hashlib.md5()
@@ -454,7 +489,9 @@ def Send_File(ip,filename,savename,filetype,overwrite):
         Save_Log('Send_File',ip + ' ' + filename + ' Client_Port is err')
         result = [0,'Client_Port is err!']
     return result
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #数据库连接函数，返回连接
 def Db_connect():
     global Db_Err_Time
@@ -470,6 +507,9 @@ def Db_connect():
         Save_Log('Conn_Db',str(e))
         Db_Err_Time = time.time()
         return False
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #数据库连接函数，返回连接
 def Db_connect_dict():
     global Db_Err_Time
@@ -485,8 +525,9 @@ def Db_connect_dict():
         Save_Log('Conn_Db',str(e))
         Db_Err_Time = time.time()
         return False
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #数据库查询函数，参数为select语句，返回数据集
 def Select(*args):
     if len(args) == 1:
@@ -507,9 +548,10 @@ def Select(*args):
             return [False,[]]
     else:
         return [False,[]]
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #数据库操作函数，参数为insert或update语句，可以为列表或字符串，返回操作结果
-
 def Do_Sqls(sqls):
     if not isinstance(sqls,list):
         sqls = sqls.split('!@#$%^&*')
@@ -527,7 +569,10 @@ def Do_Sqls(sqls):
             return 0
     else:
         pass
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#定时执行函数
 def Cron_Do():
     while True:
         conn = Db_connect()
@@ -550,8 +595,10 @@ def Cron_Do():
         else:
             pass
         time.sleep(40)
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#格式化mysql查询结果
 def List_Rs(in_rs,n):
     if in_rs and len(in_rs) > 0:
         if n <= 99 and len(in_rs[0])-1 >= n:
@@ -568,7 +615,10 @@ def List_Rs(in_rs,n):
     else:
         out_rs = []
     return out_rs
-        
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#发关报警函数,参数为报警id
 def Send_Alarm(alarm_id):
     conn = Db_connect()
     if conn:
@@ -621,14 +671,17 @@ def Send_Alarm(alarm_id):
             pass
     else:
         pass
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #查询数据中报警相关表的对应id，参数为ip和报警类型
 def Get_Alarm_Id(ip,alarm_type):
     ipid = Get_Ipid(ip)
     get_alarm_id_sql = "select id from alarms where Ipid='"+str(ipid)+"' and Type='"+alarm_type+"' and IsBeOk=0 and IsAlarm=1 order by id desc limit 1"
     rs = Select(get_alarm_id_sql,'dict')
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #发送报警函数，间隔查询数据库，取得报警信息并发送
 def Send_Alarms():
     while True:
@@ -695,7 +748,9 @@ def Send_Alarms():
         else:
             pass
         time.sleep(60)
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #查询数据中报警相关表的对应id，参数为ip和报警类型
 def Get_Alarm_Id(ip,alarm_type):
     ipid = Get_Ipid(ip)
@@ -707,7 +762,9 @@ def Get_Alarm_Id(ip,alarm_type):
     else:
         alarm_id = ''
     return alarm_id 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #检测监控数据后插入报警及更新相关项的操作函数
 def Update_Mon_Sql(ip,gid,mon_type,msg,alarm_id):
     ipid = Get_Ipid(ip)
@@ -742,7 +799,9 @@ def Update_Mon_Sql(ip,gid,mon_type,msg,alarm_id):
         data_dict_ipinfo = {'Alarms_Ids':alarms_ids_str}
         Update_Dict(dict_ipinfo,'ipinfo',ip,'Ip',data_dict_ipinfo,1)
         Send_Alarm(insert_alarms_id)
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #检测客户端发送来的数据，参数为ip和客户端数据
 def Check_Mon(ip,mondata):
     ipinfo = dict_ipinfo.get(ip,{})
@@ -892,7 +951,9 @@ def Check_Mon(ip,mondata):
         Save_Log('Check_Mon',ip + ' Mondata is Err!' + mondata)            
     else:
         pass
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #从数据中查询ip的id
 def Get_Ipid(ip):
     global dict_ipinfo
@@ -900,7 +961,9 @@ def Get_Ipid(ip):
         return dict_ipinfo.get(ip,None).get('id',None)
     else:
         return None
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #插入监控数据到表的函数
 def Insert_Monitor(ipid,ip,montext):    
     insert_monitor_sql = "insert into monitor set Ipid = " + str(ipid) + " ,MonText = '" + montext + "'"
@@ -918,7 +981,9 @@ def Insert_Monitor(ipid,ip,montext):
         Save_Log('Insert_Monitor',str(ipid) + ' Add Mondata Err!')
     else:
         pass
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #插入ip到数据库，用于客户端发送数据
 def Insert_Ip(ip,ipid):
     grpid = 1
@@ -926,7 +991,9 @@ def Insert_Ip(ip,ipid):
     data = {'id':ipid,'Ip':ip,'GroupId':grpid,'IsAlive':'alive','Status':None,'ClientStatus':1,'LoadLevel':0,'DiskLevel':0,'NetworkLevel':0,'LoginLevel':0,'ProcessLevel':0,'ConnectLevel':0,'Cpu_Pro':1,'Enable':1,'Alarms_Ids':None}
     Add_Dict(dict_ipinfo,'ipinfo',ip,data)
     Check_Devinfo(ip,ipid)
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #检测网络状况的函数，参数ip
 def Ping_Ip(ip):
     cmd = 'ping '+ip+' -c 2 -W 2'
@@ -940,7 +1007,10 @@ def Ping_Ip(ip):
         return 'alive'
     else:
         return 'down'
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#获取某IP的警报列表
 def Get_Alarms_rs(ip):
     alarms_ids = dict_ipinfo.get(ip,{}).get('Alarms_Ids',None)
     alarms_ids_rs = []
@@ -948,7 +1018,9 @@ def Get_Alarms_rs(ip):
         for i in alarms_ids.split(','):
             alarms_ids_rs.append(dict_alarms.get(int(i),{}).get('Type',''))
     return alarms_ids_rs
-    
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++    
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #主函数之一，检测主机网络状态的函数
 def Check_Alive():
     time.sleep(4)
@@ -1025,7 +1097,9 @@ def Check_Alive():
         else:
             pass
         time.sleep(30)
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #检测端口存活函数，参数ip和端口
 def Check_Port(address, port):
     s = socket.socket()
@@ -1035,8 +1109,10 @@ def Check_Port(address, port):
         return True
     except socket.error as  e:
         return False
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#更新客户端密钥
 def Update_Client_Key(address, port):
     s = socket.socket()
     try:
@@ -1046,7 +1122,10 @@ def Update_Client_Key(address, port):
     except socket.error as  e:
         pass
         #print(e)
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#web页面监控主函数
 def Monweb():
     def check_url(monweb_id,url,status_now,mutex):
         url_host = url.split('/')[2]
@@ -1114,7 +1193,10 @@ def Monweb():
             check_do.setDaemon(True)
             check_do.start()
         time.sleep(MONWEB_INTERVAL)
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#保存每日快照主函数
 def Save_Info_Day():
     sql = "select id,ip from ipinfo where ip !='0.0.0.0' and IsAlive='alive' and ClientStatus=1 and Enable=1"
     ip_list = Select(sql)
@@ -1144,8 +1226,9 @@ def Save_Info_Day():
                     Save_Log('Save_Info_Day',ip + ' get day_info err ' + str(num) + ' times')
                     num += 1
     Do_Sqls(sqls)    
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #接收到客户端监控数据的流程控制函数
 def Do_Mon(data_isok,data,client_ip):    
     global MaxIpid
@@ -1179,7 +1262,9 @@ def Do_Mon(data_isok,data,client_ip):
             Save_Log('Insert_Monitor',client_ip + ' The monitor date is err!')
     else:
         pass
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #检测设备基本信息的函数
 def Check_Devinfo(ip,ipid):
     if Check_Port(ip,CLIENT_PORT):
@@ -1213,7 +1298,9 @@ def Check_Devinfo(ip,ipid):
             Save_Log('Check_Devinfo',ip + ' ' + str(e))
     else:
         Save_Log('Check_Devinfo',ip + ' Client_Port is err')
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #检测客户开启服务的函数
 def Check_Service(ip,ipid):
     if Check_Port(ip,CLIENT_PORT):
@@ -1245,8 +1332,9 @@ def Check_Service(ip,ipid):
             Save_Log('Check_Service',ip + ' ' + str(e))
     else:
         Save_Log('Check_Service',ip + ' Client_Port is err')
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #间隔检测所有客户端开启服务的函数
 def Check_Service_All():
     sql = "select ip,id from ipinfo where ip != '0.0.0.0' and IsAlive='alive' and ClientStatus=1 and Enable=1"
@@ -1307,7 +1395,10 @@ def Mon_Ports():
                 data_dict_ports = {'Status':status_now}
                 Update_Dict(dict_ports,'ports',pid,'id',data_dict_ports,1)    
         time.sleep(180)
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#程序重启后更新所有客户端密钥
 def Update_Client_Key_All():
     sql = "select ip,id from ipinfo where ip != '0.0.0.0' and IsAlive='alive' and Enable=1 and ClientStatus=1"
     ip_list = Select(sql)
@@ -1317,7 +1408,9 @@ def Update_Client_Key_All():
             for ips in ip_list:
                 ip = ips[0]
                 Update_Client_Key(ip,CLIENT_PORT)
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #间隔检测所有客户端基本信息的函数
 def Check_Devinfo_All():
     time.sleep(30)
@@ -1334,6 +1427,10 @@ def Check_Devinfo_All():
              pass
     else:
          Save_Log('Check_Devinfo_All','can not get ip_list for db!')
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#socket接收数据函数
 def Recv_Data(socket):
     data = ''
     while True:
@@ -1344,7 +1441,10 @@ def Recv_Data(socket):
         data += buf
     return data
     socket.close()
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++    
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#操作客户端函数
 def Do_Client(ip,cmd):
     if cmd.split()[0] in NORUN_CMD:
         result = [0,"Command %s not allowed to run \n" % cmd.split()[0]]
@@ -1371,7 +1471,10 @@ def Do_Client(ip,cmd):
         result = [0,"Client_Port is err\n"]
         Save_Log('Do_Client',ip + ' ' + cmd + ' Client_Port is err')
     return result
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#更新客户端文件函数
 def Update_Client(ip):
     client_file = CLIENT_FILE
     send_file_result = Send_File(ip,client_file,client_file,'CLIENT_FILE',1)
@@ -1382,7 +1485,10 @@ def Update_Client(ip):
     else:
         result = [0,send_file_result[1]]
     return result
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#线程化执行操作客户端函数
 def Do_Oct_Thread(ips,cmd,connect):
     count = 0
     global client_result_msg
@@ -1409,8 +1515,10 @@ def Do_Oct_Thread(ips,cmd,connect):
             ipinfo_line = "------------------------------" + ip + "-------------------------------\n"
         all_result = all_result + "\n" + ipinfo_line + i[1]
     connect.send((all_result +"\n"+ ENCODE_END_STR).encode())
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#操作客户端函数
 def Do_Oct_Cmd(ip,cmd,mutex):
     if cmd == 'UPDATE_CLIENT':
         with mutex:
@@ -1475,11 +1583,16 @@ def Do_Oct_Cmd(ip,cmd,mutex):
         result_msg = result[1]
     global client_result_msg
     client_result_msg.append([ip,result_msg])
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#保存后台执行结果函数
 def Do_Bg_Result(markid,out,err):
     update_sql = "update bg_result set Stat=1, OutStr='" + out + "',ErrStr='" + err + "',EndTime=now() where MarkId=" + str(markid)
     Do_Sqls(update_sql)
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #主函数之一，监听客户端请求的流程控制函数
 def Listen_Client():
     server_ips = get_all_ips()
@@ -1569,6 +1682,9 @@ def Listen_Client():
 
         except Exception as e:
             Save_Log('Listen_Client',str(e))
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #基本的守护进程类
 class Daemon:
     def __init__(self,pidfile,homedir,process_name):
@@ -1642,20 +1758,17 @@ class Daemon:
                 
     def run(self):
         pass
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-
-
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#程序启动初始化函数
 def Init():
-    '''
-    global dict_ipinfo 
-    global dict_alarms 
-    global dict_ports
-    global dict_monweb
-    '''
-    global server_key
-    server_key = Fernet.generate_key()
-    global fernet_obj
-    fernet_obj = Fernet(server_key)
+    if ENCRYPT_MODE == "RSA_KEY":
+        global server_key
+        server_key = Fernet.generate_key()
+        global fernet_obj
+        fernet_obj = Fernet(server_key)
+
     global glo_lock
     glo_lock = threading.Lock()
 
@@ -1664,9 +1777,10 @@ def Init():
     Sync_Db_Sys_Config()
     Sync_Db_Monweb()
     Sync_Db_Ports()
-
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     
-
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#同步数据库数据到字典
 def Sync_Db(key,sql):
     dict_local = {}
     rs = Select(sql,'dict')
@@ -1675,22 +1789,34 @@ def Sync_Db(key,sql):
             k = i.get(key)
             dict_local[k] = i
     return dict_local
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#同步数据库IP数据到字典
 def Sync_Db_Ipinfo():
     sql_ipinfo = "select id,Ip,GroupId,IsAlive,ClientStatus,LoadLevel,DiskLevel,NetworkLevel,ProcessLevel,LoginLevel,ConnectLevel,Enable,1395337260 as LastCheckTime,Cpu_Pro,(select group_concat(id) from alarms where alarms.ipid=ipinfo.id and IsBeOk=0) as Alarms_Ids,(select group_concat(ports.id) from ports where ipinfo.id=ports.ipid and ports.IsMon=1) as Ports_ids from ipinfo"
     global dict_ipinfo
     dict_ipinfo = Sync_Db('Ip',sql_ipinfo)
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#同步数据库报警数据到字典
 def Sync_Db_Alarms():
     sql_alarms = "select * from alarms where IsBeOk=0 and Type!='monweb'"
     global dict_alarms
     dict_alarms = Sync_Db('id',sql_alarms)
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#同步数据库监控端口数据到字典
 def Sync_Db_Ports():
     sql_ports = "select ports.id,Ip,Port,ports.Status from ports left join ipinfo on ports.ipid=ipinfo.id where IsMon=1 and ipinfo.ip!='0.0.0.0'"
     global dict_ports
     dict_ports = Sync_Db('id',sql_ports)
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#同步数据库系统配置数据到字典
 def Sync_Db_Sys_Config():
     sql_sys_config = "select KeyName,KeyValue from sys_config where KeyName in('def_mon_ports','monweb_interval','norun_cmd')";
     dict_sys_config = Sync_Db('KeyName',sql_sys_config);
@@ -1698,13 +1824,18 @@ def Sync_Db_Sys_Config():
     MON_PORTS = '(' + dict_sys_config.get('def_mon_ports',{'KeyValue':DEF_MON_PORTS}).get('KeyValue') + ')'
     NORUN_CMD = dict_sys_config.get('norun_cmd',{'KeyValue':DEF_MON_PORTS}).get('KeyValue').split(',')
     MONWEB_INTERVAL = int(dict_sys_config.get('monweb_interval',{'KeyValue':str(DEF_MONWEB_INTERVAL)}).get('KeyValue'))
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#同步数据库页面监控数据到字典
 def Sync_Db_Monweb():
     sql_monweb = "select id,MonUrl,RstCode,Gid,(select group_concat(id) from alarms where Ipid=monweb.id and IsBeOk=0) as Alarms_Ids from monweb  where Enable = 1"
     global dict_monweb
     dict_monweb = Sync_Db('id',sql_monweb)
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#更新字典函数
 def Update_Dict(dict_name,db_table,key,key_name,new_value,sync_db):
     global dict_local
     dict_local = dict_name
@@ -1721,8 +1852,10 @@ def Update_Dict(dict_name,db_table,key,key_name,new_value,sync_db):
         if sync_db:
             update_sql = update_sql[:-1] + ' where ' + key_name + "='" + str(key) + "'"
             Do_Sqls(update_sql)
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#添加数据到现有字典
 def Add_Dict(dict_name,db_table,key,data):
     global dict_local
     dict_local = dict_name
@@ -1736,8 +1869,9 @@ def Add_Dict(dict_name,db_table,key,data):
         else:
             insert_sql = insert_sql + k + "=" + str(v) + ","
     Do_Sqls(insert_sql[:-1])
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #自定义守护进程类，重新run函数
 class My_daemon(Daemon):
     def run(self):
@@ -1780,6 +1914,7 @@ class My_daemon(Daemon):
             Listen_Client()
         else:
             print( "Try connect mysql false, please check it!")
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
 #实例化守护进程类，并定义参数选型

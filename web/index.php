@@ -1,4 +1,9 @@
 <?php
+if (!file_exists('include/db_config.php'))
+{
+    echo "<script charset='UTF-8' language='javascript'> window.location.href='init_db.php' </script>";
+	exit;
+}
 include 'head.php';
 $warntype_sql = "select Type  from alarms GROUP BY Type";
 $warntype_rs = getrs($warntype_sql);

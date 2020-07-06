@@ -45,7 +45,12 @@ function create_database()
 
 function get_python_version()
 {
-	py_version=`python -c "import sys; print(sys.version_info[0])"`
+	if [[  `which python` == "" ]];then
+		python_cmd="python3"
+	else
+		python_cmd=`which python`
+	fi
+	py_version=`$python_cmd -c "import sys; print(sys.version_info[0])"`
 	echo $py_version
 }
 
@@ -233,10 +238,12 @@ function disable_selinux()
 function sed_client_ip()
 {
 	host_ip=`ip a |grep  ' inet '|grep -v '127.0.0.1' |awk -F '/' '{print $1}'|awk '{print $2}'`
-	echo "#检测到客户端SERVER_IP未配置,请运行下面的命令修改"
-	echo ""
-	echo "sed -i 's/xxx.xxx.xxx.xxx/$host_ip/' olive_client.py"
-	echo ""
+	if [[ `grep "xxx.xxx.xxx.xxx" olive_client.py |wc -l` -eq 2 ]];then
+		echo "#检测到客户端SERVER_IP未配置,请运行下面的命令修改"
+		echo ""
+		echo "sed -i 's/xxx.xxx.xxx.xxx/$host_ip/' olive_client.py"
+		echo ""
+	fi
 }
 
 os=`check_os`
