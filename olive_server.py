@@ -136,8 +136,16 @@ PAGE_SIZE = 4096
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #加密解密函数
 if ENCRYPT_MODE == "RSA_KEY":
-    import rsa
-    from cryptography.fernet import Fernet
+    try:
+        import rsa
+    except:
+        print('module rsa is not installed')
+        sys.exit(2)
+    try:
+        from cryptography.fernet import Fernet
+    except:
+        print('module cryptography is not installed')
+        sys.exit(2)
     def encrypt(s_str):
         return encrypt_key(s_str)
     def decrypt(s_str):
@@ -264,8 +272,10 @@ def Send_Mail(address,subject,content):
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-#发送短信的函数，参数为手机号和信息内容，其中手机号为列表和字符串，列表为多个手机号
+#发送短信的函数，参数为手机号和信息内容，其中手机号为列表和字符串，列表为多个手机号,此api已失效,请根据自己的api重写些函数
 def Send_Message(mobiles,msg):
+    pass
+    '''
     Url = 'http://sms.tom.com/via/via_mt.php?send_time=1018514142&site_id=tomnet&sign=32d499a525c0d57d80d8bf015c97daa8&mobile_no='
     url_host = Url.split('/')[2]
     if Ping_Ip(url_host) == 'alive':
@@ -283,6 +293,7 @@ def Send_Message(mobiles,msg):
                 Save_Log('Send_Message',str(e)+Url)
     else:
         Save_Log('Send_Message','send message URL is Err!')
+    '''
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

@@ -7,16 +7,12 @@ import time
 import threading
 import signal
 import socket
-from signal import SIGTERM
 import struct
 import subprocess
 import zipfile
 import string
-import random
 import hashlib
-import rsa
 import pickle
-from cryptography.fernet import Fernet
 
 if sys.version_info[0] == 2:
     reload(sys)
@@ -43,16 +39,34 @@ else:
 
 
 #--------------------------加密配置--------------------------
-#加密解密配置,请与服务器端一致
-#ENCRYPT_MODE = "RSA_KEY"
+#服务器和客户端通讯的加密方式,可选项为"CUSTOM"和"RSA_KEY"
+#"CUSTOM"为自定义加密方式,不用安装rsa和cryptography模块
+#"RSA_KEY"为密钥加密,需安装rsa和cryptography模块
 ENCRYPT_MODE = "CUSTOM"
-AUTH_KEY = 17
+
+#自定义加密key,取值范围1-256
+CUSTOM_KEY = 17
+
+#加密后结尾添加的字符串,用于判断数据传输是否完整
 ENCODE_END_STR = 'OLIVE_EOS'
+
+#服务器端口命令结尾添加字符串,用于判断命令是否完整
 END_CMD_STR = 'OLIVE_EOC'
 #--------------------------加密配置--------------------------
 
 
-#--------------------------系统配置-------------------------
+#--------------------------路径配置--------------------------
+####路径设置,根据需要修改
+HOME_DIR = sys.path[0] + '/'
+SH_DIR = HOME_DIR + 'shell/'
+LOG_DIR = HOME_DIR + 'log/'
+BG_OUT_DIR = HOME_DIR + 'bg_out/'
+PIDFILE = HOME_DIR + 'my_client.pid'
+LOG_FILE = LOG_DIR + 'my_client.log'
+#--------------------------路径配置--------------------------
+
+
+#--------------------------系统配置--------------------------
 #server端IP,端口,client端口,必须修改
 SERVER_IP = 'xxx.xxx.xxx.xxx'
 SERVER_IPS = [SERVER_IP]
@@ -66,14 +80,6 @@ BIND_IP = 'AUTO'
 SEP_STR = '@!@'
 SEP_STR2 = 'R!I@L#L'
 
-#路径设置,根据需要修改
-HOME_DIR = sys.path[0] + '/'
-SH_DIR = HOME_DIR + 'shell/'
-LOG_DIR = HOME_DIR + 'log/'
-BG_OUT_DIR = HOME_DIR + 'bg_out/'
-PIDFILE = HOME_DIR + 'my_client.pid'
-LOG_FILE = LOG_DIR + 'my_client.log'
-
 #执行server端命令超时时间,单位秒
 RUN_CMD_TIMEOUT = 8
 
@@ -81,9 +87,10 @@ RUN_CMD_TIMEOUT = 8
 CMD_RESULT_LENGTH = 40960
 #server命令后台执行结果返回的长度,单位字节
 BG_RESULT_LENGTH = 4096
-#--------------------------系统配置-------------------------
+#--------------------------系统配置--------------------------
 
-#------------------------------------------安全配置-------------------------------------
+
+#---------------------------------------安全配置-------------------------------------
 #运行级别(ctrl,monitor,custom),ctrl完全控制,monitor仅监控,custom自定义
 RUN_LEVEL = 'ctrl'
 
@@ -114,22 +121,29 @@ elif RUN_LEVEL == 'monitor':
 else:
     if AUTO_GET_SHFILE == 'NO':
         AUTO_UPDATE_SHFILE = 'NO'
-#-------------------------------------------安全配置--------------------------------------
+#----------------------------------------安全配置--------------------------------------
+
 
 #--------------------------常量变量-------------------------
 CLIENT_FILENAME = os.path.realpath(__file__)
 RUN_STATE = True
+ENCODE_END_BYTE = ENCODE_END_STR.encode()
 #--------------------------常量变量-------------------------
 
-#--------------------------
-ENCODE_END_BYTE = ENCODE_END_STR.encode()
 
-
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #加密函数
-
 if ENCRYPT_MODE == "RSA_KEY":
-    import rsa
-    from cryptography.fernet import Fernet
+    try:
+        import rsa
+    except:
+        print('module rsa is not installed')
+        sys.exit(2)
+    try:
+        from cryptography.fernet import Fernet
+    except:
+        print('module cryptography is not installed')
+        sys.exit(2)
     RSA_KEY = rsa.newkeys(1024)
     def encrypt(s_str):
         return encrypt_key(s_str)
@@ -141,9 +155,8 @@ else:
     def decrypt(s_str):
         return decrypt_custom(s_str)
 
-
 def encrypt_custom(s):
-    key = AUTH_KEY
+    key = CUSTOM_KEY 
     b = bytearray(str(s).encode("utf-8"))
     n = len(b)
     c = bytearray(n*2)
@@ -162,8 +175,7 @@ def encrypt_custom(s):
     return c
 
 def decrypt_custom(s):
-    key = AUTH_KEY
-    
+    key = CUSTOM_KEY 
     s = s.decode().rstrip(ENCODE_END_STR)
     c = bytearray(str(s).encode("utf-8"))
     n = len(c)
@@ -183,7 +195,6 @@ def decrypt_custom(s):
         b[i] = b1
     return b.decode("utf-8")
 
-
 def decrypt_key(s):
     global fernet_obj
     s = s.decode().replace(ENCODE_END_STR,'')
@@ -196,13 +207,13 @@ def decrypt_key(s):
         c = b""
     return c.decode("utf-8")
 
-
 def encrypt_key(s):
     c = fernet_obj.encrypt(s.encode("utf-8"))
     c = c + ENCODE_END_STR.encode("utf-8")
     return c
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #保存日志函数
 def Save_Log(type, data):
     logdir = LOG_DIR
@@ -212,12 +223,15 @@ def Save_Log(type, data):
     f = open(logfile, 'a')
     f.write(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()) + ' ' + type + ' ' + str(data) + '\n')
     f.close()
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 def New_Socket():
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     return sock 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #守护进程类
 class Daemon:
     def __init__(self,pidfile,homedir,process_name):
@@ -276,7 +290,7 @@ class Daemon:
             return
         try:
             while True:
-                os.kill(pid, SIGTERM)
+                os.kill(pid, signal.SIGTERM)
                 time.sleep(0.1)
         except OSError as  err:
             err = str(err)
@@ -291,7 +305,10 @@ class Daemon:
                 
     def run(self):
         pass
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#检测端口存活函数
 def Check_Port(address, port):
     s = socket.socket()
     try:
@@ -300,7 +317,9 @@ def Check_Port(address, port):
         return True
     except socket.error as  e:
         return False
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #检测网络状况的函数，参数ip
 def Ping_Ip(ip):
     cmd = 'ping '+ip+' -c 3 -W 2'
@@ -314,7 +333,10 @@ def Ping_Ip(ip):
         return 'alive'
     else:
         return 'down'
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#获取本机IP函数
 def Get_Client_Ip():
     global BIND_IP
     cmd_all = "ip -4 address | grep ' inet ' | grep -v '127.0.0.1\|\/32' |awk '{print $2}'|awk -F '/' '{print $1}'"
@@ -333,7 +355,10 @@ def Get_Client_Ip():
         return ['LISTEN_PUBLIC','0.0.0.0']
     else:
         return ['UNKNOWN_ERR','0.0.0.0']
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#检测服务端函数
 def Test_Server():
     if SERVER_IP == "XXX.XXX.XXX.XXX".lower():
         print("SERVER_IP is not config")
@@ -346,7 +371,6 @@ def Test_Server():
             sys.exit(1)
     else:
         pass
-
     test_ip = Get_Client_Ip()
     test_result = test_ip[0]
     Client_Ip = str(test_ip[1])
@@ -378,8 +402,10 @@ def Test_Server():
             sys.exit(1)
         else:
             print('Test Connection Successful OLIVE_CLIENT is running listen ' + Client_Ip + ':' + str(BIND_PORT))
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-#检测端口存活函数，参数ip和端口
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#和服务端协商获取加密密钥
 def Get_server_key(address, port):
     if not Check_Port(address, port):
         return False
@@ -411,14 +437,16 @@ def Get_server_key(address, port):
         return fernet_obj
     except socket.error as  e:
         return False
-#接受文件函数
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#接收文件函数
 def Recv_File(newsock,savename,overwrite):
     time.sleep(1)
     global FILE_DATA_SOCK
     def r_data(filename,ctrl_socket):
         fp = open(filename,'wb')
         while True:
-                
             recv = ctrl_socket.recv(2048)
             recv_str = decrypt(recv)
             if recv_str.split(SEP_STR)[0] == 'MD5STR':
@@ -456,9 +484,6 @@ def Recv_File(newsock,savename,overwrite):
         fp.flush()
         time.sleep(1)
         fp.close()
-
-
-
     overwrite = str(overwrite)
     if overwrite.isdigit():
         overwrite = int(overwrite)
@@ -501,7 +526,9 @@ def Recv_File(newsock,savename,overwrite):
     except Exception  as e:
         Save_Log('Recv_File',str(e))
         newsock.close()
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #连接server端函数
 def Connect_Socket():
     sock = New_Socket()
@@ -511,7 +538,9 @@ def Connect_Socket():
     except Exception  as e:
         return False
         Save_Log('Connect_Socket',e)
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #向server端口发送获取shell文件请求的函数
 def Req_Shfile():
     if AUTO_GET_SHFILE == 'YES':
@@ -523,7 +552,9 @@ def Req_Shfile():
             Save_Log('Req_Shfile',e)
     else:
         Save_Log('Req_Shfile','auto get shfile is not allow')
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #更新shell文件的函数
 def Update_Shfile():
     try:
@@ -532,14 +563,15 @@ def Update_Shfile():
         Save_Log('Update_Shfile','have update shell file!')
     except Exception  as e:
         Save_Log('Update_Shfile',str(e))
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #解压zip文件函数
 def Unzip_File(zipfilename,unziptodir):
     if not os.path.exists(unziptodir): os.mkdir(unziptodir)
     zfobj = zipfile.ZipFile(zipfilename)
     for name in zfobj.namelist():
         name = name.replace('\\','/')
-
         if name.endswith('/'):
             os.mkdir(os.path.join(unziptodir,name))
         else:
@@ -549,7 +581,9 @@ def Unzip_File(zipfilename,unziptodir):
             outfile = open(ext_filename,'wb')
             outfile.write(zfobj.read(name))
             outfile.close()
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #接收socket数据函数
 def Recv_Data(socket):
     data = b''
@@ -560,7 +594,9 @@ def Recv_Data(socket):
             break
         data += buf
     return data
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #线程化执行命令函数
 def Subprocess_Do(cmd):
     cmd_result = []
@@ -590,8 +626,9 @@ def Subprocess_Do(cmd):
         cmd_result.append(Cmd_Run_Err)
         Save_Log('Subprocess_Do',cmd + ' run err ' + Cmd_Run_Err)
     return cmd_result
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #监控任务函数
 def Mon_Task():
     time.sleep(3)
@@ -602,7 +639,6 @@ def Mon_Task():
             interval = 300.0 - 2.1*int(ifnum[1])
         else:
             interval = 295.5
-
         cmd = SH_DIR+'mon_all_stat'
         if os.path.isfile(cmd):
             run_num = 0
@@ -624,18 +660,20 @@ def Mon_Task():
                     
             data = 'MON' + SEP_STR + data
             sock = Connect_Socket()
+
             if sock:
                 sock.send(encrypt(data))
                 sock.close()
             else:
                 pass
+
             time.sleep(interval)
         else:
             Req_Shfile()
             time.sleep(20)
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #运行命令函数
-
 def Run_Cmd(conn,cmd):
     if cmd.strip().endswith('&'):
         markid=cmd.split(SEP_STR2)[0]
@@ -711,14 +749,18 @@ def Run_Cmd(conn,cmd):
         pro.stderr.close()
         time.sleep(0.3)
         conn.close()
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #重启client端函数
 def Restart_client():
     time.sleep(3)
     global RUN_STATE
     RUN_STATE = False
     Save_Log('Restart_client','Stop signal have send! The process will restart after 5s')
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #执行server端命令
 def Do_Server(conn,recv):
     if len(recv.split(SEP_STR)) >= 3:
@@ -797,7 +839,9 @@ def Do_Server(conn,recv):
     else:
         conn.close()
         Save_Log('Warning!',recv + ' recvdata form is err!')
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #继承守护进程类重写run函数
 class My_daemon(Daemon):
     def run(self):
@@ -841,6 +885,8 @@ class My_daemon(Daemon):
         s.close()
         os.system(SH_DIR+'restart_client start ' + CLIENT_FILENAME)
         sys.exit()
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 
 if __name__ == '__main__':
     daemon = My_daemon(pidfile=PIDFILE,homedir=HOME_DIR,process_name=sys.argv[0])

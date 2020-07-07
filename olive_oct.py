@@ -4,8 +4,6 @@ import os
 import atexit
 import sys
 import time
-import threading
-from signal import SIGTERM
 import socket
 import struct
 import subprocess
@@ -14,8 +12,6 @@ import string
 
 
 #加密配置,请配置server端于此保持一致 建议修改
-OFFSET = '17'
-JAMSTR = '!@!'
 ENDSTR = 'OLIVE_EOS'
 
 #用于字符串分解,须与server和PHP一致 建议修改

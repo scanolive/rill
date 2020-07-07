@@ -8,7 +8,7 @@ if (!file_exists('include/db_config.php'))
 	
 if (empty($_SESSION['rlll_olive_scan_level']))
 {
-	alert_go("请先登录","login.php");
+	alert_go("","login.php");
 	exit;
 }
 else

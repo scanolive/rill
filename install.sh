@@ -259,4 +259,4 @@ if [[ $? -eq 1 ]];then
 fi
 disable_selinux
 sed_client_ip
-create_database
+#create_database

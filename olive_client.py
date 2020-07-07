@@ -134,8 +134,16 @@ ENCODE_END_BYTE = ENCODE_END_STR.encode()
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #加密函数
 if ENCRYPT_MODE == "RSA_KEY":
-    import rsa
-    from cryptography.fernet import Fernet
+    try:
+        import rsa
+    except:
+        print('module rsa is not installed')
+        sys.exit(2)
+    try:
+        from cryptography.fernet import Fernet
+    except:
+        print('module cryptography is not installed')
+        sys.exit(2)
     RSA_KEY = rsa.newkeys(1024)
     def encrypt(s_str):
         return encrypt_key(s_str)
