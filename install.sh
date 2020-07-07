@@ -238,7 +238,7 @@ function disable_selinux()
 function sed_client_ip()
 {
 	host_ip=`ip a |grep  ' inet '|grep -v '127.0.0.1' |awk -F '/' '{print $1}'|awk '{print $2}'`
-	if [[ `grep "xxx.xxx.xxx.xxx" olive_client.py |wc -l` -eq 2 ]];then
+	if [[ `grep "xxx.xxx.xxx.xxx" olive_client.py| grep -v "lower" |wc -l` -eq 1 ]];then
 		echo "#检测到客户端SERVER_IP未配置,请运行下面的命令修改"
 		echo ""
 		echo "sed -i 's/xxx.xxx.xxx.xxx/$host_ip/' olive_client.py"
