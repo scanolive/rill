@@ -36,10 +36,10 @@ Mounted=($(df -lh | grep -v -E '/mnt|/media/cdrom|/lib/init/rw|tmpfs|udev|rootfs
 for ((i=0;i<${#Filesystem[@]};i++))
 do
 	if [ $i -lt 10 ]
-		then
-			NUM="0$i"
-		else
-			NUM=$i
+	then
+		NUM="0$i"
+	else
+		NUM=$i
 	fi
 echo '##check_disk_'$NUM'##=>##{"Filesystem":"'${Filesystem[$i]}'","Size":"'${Size[$i]}'","Used":"'${Used[$i]}'","Avail":"'${Avail[$i]}'","Use%":"'${Use_per[$i]}'","Mounted":"'${Mounted[$i]}'"}##||' | sed "s/##/$tmp/g"
 done

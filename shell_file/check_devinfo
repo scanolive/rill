@@ -37,7 +37,7 @@ echo \"devinfo\":\{\
 	\"Uptime\":\"$UPTIME\",\
 	\"HostName\":\"$HOSTNAME\",\
 	\"Release_Date\":\"$Release_Date\",\
-   	\"Vendor\":\"$VENDOR\",\
+	\"Vendor\":\"$VENDOR\",\
 	\"Model\":\"$MODEL\",\
 	\"Cpu_Model\":\"$CPU_MODEL\",\
 	\"Cpu_Num\":\"$CPU_NUM\",\

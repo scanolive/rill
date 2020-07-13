@@ -7,16 +7,16 @@ allnum=`expr $tcpnum + $udpnum`
 connect_str="\"constat\":{\"udp\":"$udpnum",\"tcp\":"$tcpnum",\"allnum\":"$allnum"}"
 
 #---------------------mon_disk_stat---------------------
-disk_totel=$(/sbin/fdisk -l 2>/dev/null  | grep "Disk \/"|grep -v "VolGroup"| awk -F[\ :,] '{print $2,$4$5}')
-Size=($(df -lh | grep -v -E '/mnt|/media/cdrom|/lib/init/rw|tmpfs|udev|rootfs' | sed  '/\/dev\/[^h,c,s,shm,disk][^d]/N;s/\n//g'| awk 'NR>1{print $2}'))
-Used=($(df -lh | grep -v -E '/mnt|/media/cdrom|/lib/init/rw|tmpfs|udev|rootfs' | sed  '/\/dev\/[^h,c,s,shm,disk][^d]/N;s/\n//g'| awk 'NR>1{print $3}'))
-Mounted=($(df -lh | grep -v -E '/mnt|/media/cdrom|/lib/init/rw|tmpfs|udev|rootfs' | sed  '/\/dev\/[^h,c,s,shm,disk][^d]/N;s/\n//g'| awk 'NR>1{print $6}'))
-
+file_system_type=`grep -vE "^#|swap|cdrom|^$" /etc/fstab |awk '{if ($2=="/") print $3}'` 
+disk_totel=$(fdisk -l 2>/dev/null  | grep "Disk \/"|grep -v "VolGroup"| awk -F[\ :,] '{print $2,$4$5}')
+Size=($(df -lht $file_system_type | sed  '/\/dev\/[^h,c,s,shm,disk][^d]/N;s/\n//g'| awk 'NR>1{print $2}'))
+Used=($(df -lht $file_system_type | sed  '/\/dev\/[^h,c,s,shm,disk][^d]/N;s/\n//g'| awk 'NR>1{print $3}'))
+Mounted=($(df -lht $file_system_type | sed  '/\/dev\/[^h,c,s,shm,disk][^d]/N;s/\n//g'| awk 'NR>1{print $6}'))
 
 for ((i=0;i<${#Size[@]};i++))
 do
 	s_l=$(expr length ${Size[$i]})
-        u_l=$(expr length ${Used[$i]})
+	u_l=$(expr length ${Used[$i]})
 	size=${Size[$i]}
 	used=${Used[$i]}
 	l_s=${size:$(($s_l-1)):$s_l}
@@ -29,19 +29,19 @@ do
 	elif [[ $l_s == 'T' ]]
 	then
 		lSize=${size:0:$(($s_l-1))}
-                lSize=$(expr ${lSize%.*} \* 1024 \* 1024 )
+		lSize=$(expr ${lSize%.*} \* 1024 \* 1024 )
 	else
 		lSize=${size:0:$(($s_l-1))}
 	fi
 
 	if [[ $l_u == 'G' ]]
 	then
-        	lUsed=${used:0:$(($u_l-1))}
-        	lUsed=`expr ${lUsed%.*} \* 1024`
+		lUsed=${used:0:$(($u_l-1))}
+		lUsed=`expr ${lUsed%.*} \* 1024`
 	elif [[ $l_u == 'T' ]]
 	then
 		lUsed=${used:0:$(($u_l-1))}
-                lUsed=`expr ${lUsed%.*} \* 1024 \* 1024`
+		lUsed=`expr ${lUsed%.*} \* 1024 \* 1024`
 	else
 		lUsed=${used:0:$(($u_l-1))}
 	fi
@@ -63,7 +63,7 @@ do
 	a1=`echo $str|awk '{print $1}'`
 	a2=`echo $str|awk '{print $2}'`
 	if [[ $a2 == "" ]]
-   	then
+	then
 		a2=0
 	fi
 	aa=`echo $a1 $a2|awk '{print $1+$2}'|awk -F "." '{print $1}'`
