@@ -69,7 +69,9 @@ LOG_FILE = LOG_DIR + 'my_client.log'
 #--------------------------系统配置--------------------------
 #server端IP,端口,client端口,必须修改
 SERVER_IP = 'xxx.xxx.xxx.xxx'
-SERVER_IPS = [SERVER_IP]
+#此选项只有server端运行于docker容器下,且client端运行于宿主机才需要配置
+DOCKER_SERVER_IP=""
+SERVER_IPS = [SERVER_IP,DOCKER_SERVER_IP]
 SERVER_PORT = 33331
 BIND_PORT = 22221
 
@@ -339,8 +341,8 @@ def Ping_Ip(ip):
 #获取本机IP函数
 def Get_Client_Ip():
     global BIND_IP
-    cmd_all = "ip -4 address | grep ' inet ' | grep -v '127.0.0.1\|\/32' |awk '{print $2}'|awk -F '/' '{print $1}'"
-    cmd_lan = "ip -4 address | grep ' inet ' | grep -v '127.0.0.1\|\/32' |awk '{print $2}'|awk -F '/' '{print $1}'|sed -n '/^\(172\.\([1][6-9]\|[2][0-4]\|3[01]\)\.\|10\.\|192\.168\.\)/p'"
+    cmd_all = "for i in `ip link |grep -v 'link' |awk -F ':' '{print $2}'`;do if ! test `ls /sys/devices/virtual/net/|grep $i`;then ip a show $i|grep ' inet '|awk  '{print $2}';fi;done |awk -F '/' '{print $1}'"
+    cmd_lan = "for i in `ip link |grep -v 'link' |awk -F ':' '{print $2}'`;do if ! test `ls /sys/devices/virtual/net/|grep $i`;then ip a show $i|grep ' inet '|awk  '{print $2}';fi;done |awk -F '/' '{print $1}'|sed -n '/^\(172\.\([1][6-9]\|[2][0-4]\|3[01]\)\.\|10\.\|192\.168\.\)/p'"
     All_Ip = Subprocess_Do(cmd_all)
     Lan_Ip = Subprocess_Do(cmd_lan)
     if BIND_IP != 'AUTO':
