@@ -6,7 +6,7 @@ FREE=`which free`
 UNAME=`which uname`
 UPTIME=`which uptime`
 
-SN=`cat /sys/class/dmi/id/product_serial|awk '{print $1}'`|| SN='NO_Sernumber'
+SN=`cat /sys/class/dmi/id/product_serial|sed 's/ //g'`|| SN='NO_Sernumber'
 Release_Date=`cat /sys/class/dmi/id/bios_date`|| Release_Date='01/01/1980'
 VENDOR=`cat /sys/class/dmi/id/bios_vendor|awk '{print $1}' `|| VENDOR='NO_Vendor'
 MODEL=`cat /sys/class/dmi/id/product_name`|| MODEL='NO_Product'

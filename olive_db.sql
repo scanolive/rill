@@ -143,7 +143,7 @@ CREATE TABLE `devinfo` (
   `DevName` char(50) DEFAULT NULL,
   `Ipbak` char(40) DEFAULT NULL,
   `Ipid` int(20) NOT NULL,
-  `SN` char(40) DEFAULT NULL,
+  `SN` char(60) DEFAULT NULL,
   `OS` char(60) DEFAULT NULL,
   `Ips` char(60) DEFAULT NULL,
   `Release_Date` char(60) DEFAULT NULL,
