@@ -1,6 +1,4 @@
 #!/bin/bash
-#str=`netstat -nltp|grep -v "^tcp6"|awk 'NR>2{split($4,s,":");split($7,a,"/");print "\""s[length(s)]"_"a[2]"\":""\"""OK""\""","}'|sort|uniq` 
-#str=`netstat -nltp4|awk 'NR>2{l=split($4,s,":");split($7,a,"/"); if (s[l-1]!="127.0.0.1") print "\""s[l]"_"a[2]"\":""\"""OK""\""","}'|sort|uniq`    
 str=`ss -4tlnp|awk 'NR>1 {sl=split($4,s,":");al=split($6,a,"\"");if (s[sl-1]!="127.0.0.1") print "\""s[sl]"_"a[al-1]"\":""\"""OK""\""","}'|sort|uniq`
 str="'check_service'=>'{"$str"}'||"
 echo $str|sed "s/,}'||/}'||/g;s/ //g"

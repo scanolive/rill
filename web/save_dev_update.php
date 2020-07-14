@@ -15,7 +15,7 @@ if (!empty($_POST['ip']))
 	}
 	else
 	{
-		$devname = "NULL";
+		$devname = '';
 	}
 			
 	if (!empty($_POST['idc']))
@@ -24,7 +24,7 @@ if (!empty($_POST['ip']))
 	}
 	else
 	{
-		$idc = "NULL";
+		$idc = '';
 	}
 	if (!empty($_POST['place']))
 	{
@@ -32,7 +32,7 @@ if (!empty($_POST['ip']))
 	}
 	else
 	{
-		$place = "NULL";
+		$place = '';
 	}
 	if (!empty($_POST['capex']))
 	{
@@ -40,7 +40,7 @@ if (!empty($_POST['ip']))
 	}
 	else
 	{
-		$capex = "NULL";
+		$capex = 'NULL';
 	}
 	if (!empty($_POST['opex']))
 	{
@@ -48,7 +48,7 @@ if (!empty($_POST['ip']))
 	}
 	else
 	{
-		$opex = "NULL";
+		$opex = 'NULL';
 	}
 	if (!empty($_POST['sgroup']))
 	{
@@ -56,7 +56,8 @@ if (!empty($_POST['ip']))
 		$update_gid = "update ipinfo set GroupId=".$gid." where Ip = '$ip'";
 		$update_alarms = "update alarms set Gid=".$gid." where Ip = '$ip'";
 	}
-$update_sql = "update devinfo set
+	$update_sql = "update devinfo 
+		left join ipinfo on devinfo.ipid=ipinfo.id set
 		Idc = '$idc',
 		DevName = '$devname',
 		Place = '$place',
@@ -64,8 +65,7 @@ $update_sql = "update devinfo set
 		Opex_Price = $opex
 		where Ip='$ip' and
 		SN = '$SN';";
-		
-//echo $update_sql;
+
 do_sql($update_gid);
 do_sql($update_alarms);
 do_sql($update_sql);

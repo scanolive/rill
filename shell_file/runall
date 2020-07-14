@@ -12,26 +12,23 @@ fifteen_load=$(echo $system_load| awk '{print $1}')
 echo '##check_load##=>##{"1min":"'$one_load'","5min":"'$five_load'","15min":"'$fifteen_load'"}##||' | sed "s/##/$tmp/g"
 
 #-------------------------check_cupinfo-------------------------
-cat=$(which cat)
-cpu_type=$($cat /proc/cpuinfo | grep "model name" | awk -F[:@] '{print $2}' | sed 's/ \+$//g'| uniq)
-cpu_mhz=$($cat /proc/cpuinfo | grep "model name" | awk -F[:@] '{print $3}' | uniq)
-cpu_num=$($cat /proc/cpuinfo | grep "physical id" | sort | uniq -c | wc -l)
-cpu_cores=$($cat /proc/cpuinfo | grep "cpu cores" |grep -o "[0-9]"|wc -l)
-if [ -z $cpu_cores ]
-then
-cpu_cores=$($cat /proc/cpuinfo | grep "model name" | wc -l)
+cpu_type=$(cat /proc/cpuinfo | grep "model name" | awk -F[:@] '{print $2}' | sed 's/ \+$//g'| uniq)
+cpu_mhz=$(cat /proc/cpuinfo | grep "model name" | awk -F[:@] '{print $3}' | uniq)
+cpu_num=$(cat /proc/cpuinfo | grep "physical id" | sort | uniq -c | wc -l)
+cpu_cores=$(cat /proc/cpuinfo | grep "cpu cores" |grep -o "[0-9]"|wc -l)
+if [ -z $cpu_cores ];then
+	cpu_cores=$($cat /proc/cpuinfo | grep "model name" | wc -l)
 fi
 echo '##check_cpuinfo##=>##{"cpu_type":"'"$cpu_type"'","cpu_mhz":"'"$cpu_mhz"'","cpu_number":"'"$cpu_num"'","cpu_cores":"'"$cpu_cores"'"}##||' | sed "s/##/$tmp/g"
 
 #---------------------------check_disk---------------------------
-#disk_totel=$(fdisk -l | grep "Disk \/" | awk -F[\ :,] '{print $2,$4$5}')
-#disk_size=$(df -h | grep -v -E '/mnt|/media/cdrom' | sed  '/\/dev\/[^h,c,s][^d]/N;s/\n//g' | paste -d ',' -s| sed 's/\ \+/|/g')
-Filesystem=($(df -lh | grep -v -E '/mnt|/media/cdrom|/lib/init/rw|tmpfs|udev|rootfs' | sed  '/\/dev\/[^h,c,s,shm][^d]/N;s/\n//g'| awk 'NR>1{print $1}'))
-Size=($(df -lh | grep -v -E '/mnt|/media/cdrom|/lib/init/rw|tmpfs|udev|rootfs' | sed  '/\/dev\/[^h,c,s,shm][^d]/N;s/\n//g'| awk 'NR>1{print $2}'))
-Used=($(df -lh | grep -v -E '/mnt|/media/cdrom|/lib/init/rw|tmpfs|udev|rootfs' | sed  '/\/dev\/[^h,c,s,shm][^d]/N;s/\n//g'| awk 'NR>1{print $3}'))
-Avail=($(df -lh | grep -v -E '/mnt|/media/cdrom|/lib/init/rw|tmpfs|udev|rootfs' | sed  '/\/dev\/[^h,c,s,shm][^d]/N;s/\n//g'| awk 'NR>1{print $4}'))
-Use_per=($(df -lh | grep -v -E '/mnt|/media/cdrom|/lib/init/rw|tmpfs|udev|rootfs' | sed  '/\/dev\/[^h,c,s,shm][^d]/N;s/\n//g'| awk 'NR>1{print $5}'))
-Mounted=($(df -lh | grep -v -E '/mnt|/media/cdrom|/lib/init/rw|tmpfs|udev|rootfs' | sed  '/\/dev\/[^h,c,s,shm][^d]/N;s/\n//g'| awk 'NR>1{print $6}'))
+file_system_type=`grep -vE "^#|swap|cdrom|^$" /etc/fstab |awk '{if ($2=="/") print $3}'` 
+Filesystem=($(df -lht $file_system_type | sed  '/\/dev\/[^h,c,s,shm][^d]/N;s/\n//g'| awk 'NR>1{print $1}'))
+Size=($(df -lht $file_system_type | sed  '/\/dev\/[^h,c,s,shm][^d]/N;s/\n//g'| awk 'NR>1{print $2}'))
+Used=($(df -lht $file_system_type | sed  '/\/dev\/[^h,c,s,shm][^d]/N;s/\n//g'| awk 'NR>1{print $3}'))
+Avail=($(df -lht $file_system_type | sed  '/\/dev\/[^h,c,s,shm][^d]/N;s/\n//g'| awk 'NR>1{print $4}'))
+Use_per=($(df -lht $file_system_type | sed  '/\/dev\/[^h,c,s,shm][^d]/N;s/\n//g'| awk 'NR>1{print $5}'))
+Mounted=($(df -lht $file_system_type | sed  '/\/dev\/[^h,c,s,shm][^d]/N;s/\n//g'| awk 'NR>1{print $6}'))
 
 for ((i=0;i<${#Filesystem[@]};i++))
 do
@@ -55,7 +52,6 @@ mem_swap_free=$(free -m | grep Swap | awk '{print $4}')
 echo '##check_meminfo##=>##{"mem_total":"'${mem_total}MB'","mem_free":"'${mem_free}MB'","mem_buffer":"'${mem_buff}MB'","mem_cache":"'${mem_cache}MB'","mem_swap_total":"'${mem_swap_total}MB'","mem_swap_free":"'${mem_swap_free}MB'"}##||' | sed "s/##/$tmp/g"
 
 #---------------------------check_service---------------------------
-#str=`netstat -nltp4|awk 'NR>2{l=split($4,s,":");split($7,a,"/"); if (s[l-1]!="127.0.0.1") print "\""s[l]"\":\""a[2]"\","}'|sort|uniq`
 str=`ss -4tlnp|awk 'NR>1 {sl=split($4,s,":");al=split($6,a,"\"");if (s[sl-1]!="127.0.0.1") print "\""s[sl]"_"a[al-1]"\":""\"""OK""\""","}'|sort|uniq`
 str="'check_service'=>'{"$str"}'||"
 echo $str|sed "s/,}'||/}'||/g;s/ //g"
@@ -85,7 +81,6 @@ do
 done
 
 #----------------------------check_bandwidth------------------------------
-#eth=($(ifconfig|grep 'Link '|grep 'Ethernet' |grep -v 'Loopback'|awk '{print $1}'))
 eth=($(ip -4 address |grep 'BROADCAST,MULTICAST,UP,LOWER_UP'|awk -F ': ' '{print $2}'))
 for ((i=0;i<${#eth[@]};i++))
 do
@@ -93,7 +88,7 @@ do
 	TXpre=`expr $(/sbin/ip -s link show ${eth[$i]} | awk 'NR==6{print $1}')`
 
 	if [ "$RXpre" -ne 0 ];then
-	echo '##get_bandwidth_'$i'##=>##{"device":"'${eth[$i]}'","in":"'$RXpre'","out":"'$TXpre'"}##||' | sed "s/##/$tmp/g"
+		echo '##get_bandwidth_'$i'##=>##{"device":"'${eth[$i]}'","in":"'$RXpre'","out":"'$TXpre'"}##||' | sed "s/##/$tmp/g"
 	fi
 done
 

@@ -1,16 +1,17 @@
 #!/bin/bash
 UNAME=`which uname`
 HOSTNAME_CMD=`which hostname`
-DMIDECODE=`which dmidecode` || (yum install dmidecode -y;DMIDECODE=`which dmidecode`)
 FDISK=`which fdisk`
 FREE=`which free`
 UNAME=`which uname`
 UPTIME=`which uptime`
-SN=`$DMIDECODE |grep "Serial Number:" |awk 'NR==1 {print $3}'`|| SN='NO_Sernumber'
-Release_Date=`$DMIDECODE|grep "Release"|awk -F ":" '{print $2}'`|| Release_Date='01/01/1980'
-VENDOR=`$DMIDECODE|grep "Vendor" |awk 'NR==1 {print $2}'`|| VENDOR='NO_Vendor'
-MODEL=`$DMIDECODE |grep "Product"|awk -F ":" 'NR==1 {print $2}'|awk '{print $2$3}'`|| MODEL='NO_Product'
-CPU_NUM=`cat /proc/cpuinfo | grep physical | uniq -c|wc -l`||CPU_NUM=1
+
+SN=`cat /sys/class/dmi/id/product_serial|awk '{print $1}'`|| SN='NO_Sernumber'
+Release_Date=`cat /sys/class/dmi/id/bios_date`|| Release_Date='01/01/1980'
+VENDOR=`cat /sys/class/dmi/id/bios_vendor|awk '{print $1}' `|| VENDOR='NO_Vendor'
+MODEL=`cat /sys/class/dmi/id/product_name`|| MODEL='NO_Product'
+CPU_NUM=`cat /proc/cpuinfo| grep "physical id"|sort| uniq| wc -l`||CPU_NUM=1
+CPU_CORES=`cat /proc/cpuinfo| grep "cpu cores"| uniq|awk -F ":" '{print $2}'` || CPU_CORES=1
 CPU_MODEL=`cat /proc/cpuinfo | grep "model name"|uniq |cut -f2 -d:`
 CPU_PRO=`grep ^processor /proc/cpuinfo |wc -l`||CPU_PRO=1
 DISK_SIZE=`$FDISK -l 2>/dev/null |grep "Disk"|grep bytes|grep -v "VolGroup"|grep -v "mapper"| awk '{print $3"G"}'`
@@ -41,6 +42,7 @@ echo \"devinfo\":\{\
 	\"Model\":\"$MODEL\",\
 	\"Cpu_Model\":\"$CPU_MODEL\",\
 	\"Cpu_Num\":\"$CPU_NUM\",\
+	\"Cpu_Cores\":\"$CPU_CORES\",\
 	\"Cpu_Pro\":\"$CPU_PRO\",\
 	\"Disk\":\"$DISK_SIZE\",\
 	\"Memory\":\"$MEM_SIZE\",\

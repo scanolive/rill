@@ -111,7 +111,7 @@ else
 	$vendor_rs = getrs($vendor_rs_sql);
 	$model_rs = getrs($model_rs_sql);
 	$IDC_rs = getrs($IDC_rs_sql);
-	$sql = "select SN,OS,HOSTNAME,DevName,ipgroup.GroupName,ipinfo.ip,replace(ips,ipinfo.ip,''),concat(Vendor,'-',Model),Disk,Memory,concat_ws('',substring(Cpu_Model,23,10),'|',Cpu_Num,'/',devinfo.Cpu_Pro),concat(Idc,'/',Place),Enable,devinfo.id,ipgroup.id from devinfo Left Join ipinfo ON ipinfo.id=devinfo.Ipid Left Join ipgroup ON ipgroup.id = ipinfo.GroupId  where ipinfo.GroupId in $gids $SN_sql $model_sql $vendor_sql $IDC_sql $searchip_sql $enable_sql";
+	$sql = "select SN,OS,HOSTNAME,DevName,ipgroup.GroupName,ipinfo.ip,Vendor,Model,Disk,Memory,replace(replace(replace(Cpu_Model,'Intel(R) ',''),'Xeon(R)',''),'Core(TM)',''),Cpu_Num,Cpu_Cores,devinfo.Cpu_Pro,Idc,Place,if(Enable=1,'启用','禁用'),devinfo.id,ipgroup.id from devinfo Left Join ipinfo ON ipinfo.id=devinfo.Ipid Left Join ipgroup ON ipgroup.id = ipinfo.GroupId  where ipinfo.GroupId in $gids $SN_sql $model_sql $vendor_sql $IDC_sql $searchip_sql $enable_sql";
 	$sql_num = "select count(SN) from devinfo Left Join ipinfo ON ipinfo.id=devinfo.Ipid Left Join ipgroup ON ipgroup.id = ipinfo.GroupId  where ipinfo.GroupId in $gids $SN_sql $model_sql $vendor_sql $IDC_sql $searchip_sql $enable_sql";
 $pagesize = $_SESSION['devinfo_pagesize'];
 $num_all = getrs($sql_num);
@@ -353,12 +353,16 @@ else
                 <td>设备备注</td>
                 <td>分组</td>
                 <td>IP</td>
-                <td>IP2</td>
+                <td>厂商</td>
                 <td>型号</td>
                 <td>硬盘</td>
                 <td>内存</td>
+                <td>CPU型号</td>
                 <td>CPU</td>
-                <td>IDC位置</td>
+                <td>核心</td>
+                <td>线程</td>
+                <td>IDC</td>
+                <td>位置</td>
                 <td>状态</td>
 <?php
 if ( $s_u_level < 4)
@@ -372,14 +376,6 @@ for( $i=0;$i<count($dev);$i++ )
 	echo "<td class=Ptable>";	
 	echo $i+1;
 	echo "</td>";
-	if ($dev[$i][12] == 1)
-	{
-		$dev[$i][12] = "启用";
-	}
-	else
-	{
-		$dev[$i][12] = "禁用";
-	}		
 	for( $j=0;$j<count($dev[0])/2-2;$j++ )
 	{ 
 		echo "<td class=Ptable>";	
@@ -389,7 +385,7 @@ for( $i=0;$i<count($dev);$i++ )
 	if ( $s_u_level < 4)
 	{		
 		echo '<td ><a href="dev_update.php?ip='.$dev[$i][5];
-		echo '&group='.$dev[$i][14];
+		echo '&group='.$dev[$i][count($dev[0])/2];
 		echo '&url='.str_replace("&","!@!", $url_now);
 		echo '">编辑</a></td>';
 	}
