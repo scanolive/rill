@@ -11,7 +11,8 @@ RUN sed -i 's/security.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list &&
 	default-mysql-server php-mysql apache2 libapache2-mod-php && \
 	rm -rf /var/lib/apt/lists/*
 
-RUN mv /var/lib/mysql /var/lib/mysql_bak && \
+RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
+	mv /var/lib/mysql /var/lib/mysql_bak && \
 	mkdir /var/lib/mysql && \
 	mkdir /myrill && \ 
 	mkdir /myolive && \ 
