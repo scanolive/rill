@@ -86,6 +86,7 @@
 	```
 	./olive_client.py start
 	```
+* 若是server端是docker方式部署,则server端本机远行client端需要配置DOCKER\_SERVER_IP
 * 若系统开启防火墙,则需开放对应端口
 
 
